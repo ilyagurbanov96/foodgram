@@ -1,4 +1,4 @@
-from rest_framework import viewsets, permissions, status, generics, filters
+from rest_framework import viewsets, permissions, status, generics
 from rest_framework.response import Response
 from recipes.models import (User, Recipe, Tag, Ingredient,
                             Favorite, ShoppingCart, Subscription)
@@ -7,6 +7,7 @@ from .serializers import (UserSerializer, RecipeSerializer,
                           FavoriteSerializer, ShoppingCartSerializer,
                           SubscriptionSerializer, SubscribeSerializer)
 from .permissions import IsAuthorOrReadOnly
+from .filters import IngredientFilter
 from rest_framework.pagination import (LimitOffsetPagination,
                                        PageNumberPagination)
 from collections import defaultdict
@@ -44,8 +45,8 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    filter_backends = (DjangoFilterBackend, filters.SearchFilter)
-    search_fields = ('^name',)
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = IngredientFilter
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
