@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from recipes.models import (Recipe, Ingredient,
                             Tag, Favorite,
-                            ShoppingCart, Subscription)
+                            ShoppingCart, Subscription,
+                            RecipeIngredient)
 from users.models import User
 
 
@@ -17,6 +18,12 @@ class TagSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'slug')
 
 
+class RecipeIngredientSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RecipeIngredient
+        fields = ('id', 'amount')
+
+
 class RecipeSerializer(serializers.ModelSerializer):
     author = serializers.PrimaryKeyRelatedField(read_only=True)
     ingredients = IngredientSerializer(many=True)
@@ -25,7 +32,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = '__all__'
-        read_only_fields = 'author'
+        read_only_fields = ('author',)
 
     def create(self, validated_data):
         ingredients_data = validated_data.pop('ingredients')

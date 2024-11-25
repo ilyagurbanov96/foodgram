@@ -25,8 +25,8 @@ router_v1.register(r'shopping_cart', ShoppingCartViewSet,
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router_v1.urls)),
-    path('api/', include('djoser.urls')),
-    path('api/', include('djoser.urls.jwt')),
+    path('api/auth/', include('djoser.urls')),
+    path('api/auth/', include('djoser.urls.authtoken')),
     path('api/recipes/download_shopping_cart/', ShoppingCartViewSet.as_view(
         {'get': 'download'}), name='download_shopping_cart'),
     path('api/users/<int:id>/subscribe/', SubscribeView.as_view(),
