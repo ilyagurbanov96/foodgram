@@ -7,6 +7,33 @@ import base64
 from django.core.files.base import ContentFile
 
 
+class Base64ImageField(serializers.ImageField):
+    def to_internal_value(self, data):
+        if isinstance(data, str) and data.startswith('data:image'):
+            format, imgstr = data.split(';base64,')
+            ext = format.split('/')[-1]
+            data = ContentFile(base64.b64decode(imgstr), name='temp.' + ext)
+        return super().to_internal_value(data)
+
+
+class UserSerializer(serializers.ModelSerializer):
+    is_subscribed = serializers.BooleanField(default=False)
+    avatar = Base64ImageField(required=False)
+
+    class Meta:
+        model = User
+        fields = ('id', 'email', 'username', 'is_subscribed',
+                  'first_name', 'last_name', 'avatar')
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        request = self.context.get('request')
+        if request.user.is_authenticated:
+            representation['is_subscribed'] = Subscription.objects.filter(
+                user=request.user, author=instance).exists()
+        return representation
+
+
 class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ingredient
@@ -19,77 +46,30 @@ class TagSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'slug')
 
 
-class Base64ImageField(serializers.ImageField):
-    def to_internal_value(self, data):
-        if isinstance(data, str) and data.startswith('data:image'):
-            format, imgstr = data.split(';base64,')
-            ext = format.split('/')[-1]
-
-            data = ContentFile(base64.b64decode(imgstr), name='temp.' + ext)
-
-        return super().to_internal_value(data)
-
-
 class RecipeSerializer(serializers.ModelSerializer):
-    author = serializers.PrimaryKeyRelatedField(read_only=True)
     ingredients = IngredientSerializer(read_only=True, many=True)
     tags = TagSerializer(read_only=True, many=True)
     image = Base64ImageField()
+    author = UserSerializer(read_only=True)
+    is_favorited = serializers.SerializerMethodField()
+    is_in_shopping_cart = serializers.SerializerMethodField()
 
     class Meta:
         model = Recipe
-        fields = (
-            'id',
-            'tags',
-            'ingredients',
-            'author',
-            'name',
-            'text',
-            'cooking_time',
-            'image',
-        )
-        read_only_fields = ('author',)
+        fields = ('id', 'tags',
+                  'ingredients', 'author',
+                  'name', 'text',
+                  'cooking_time', 'image',
+                  'is_favorited', 'is_in_shopping_cart')
 
-    def create(self, validated_data):
-        ingredients_data = validated_data.pop('ingredients')
-        tags_data = validated_data.pop('tags')
-        recipe = Recipe.objects.create(**validated_data)
+    def get_is_favorited(self, obj):
+        request = self.context.get('request')
+        return Favorite.objects.filter(user=request.user).exists()
 
-        for ingredient_data in ingredients_data:
-            ingredient, created = (
-                Ingredient.objects.get_or_create(**ingredient_data))
-            recipe.ingredients.add(ingredient)
-
-        for tag_data in tags_data:
-            tag, created = Tag.objects.get_or_create(**tag_data)
-            recipe.tags.add(tag)
-
-        return recipe
-
-    def update(self, instance, validated_data):
-        ingredients_data = validated_data.pop('ingredients', None)
-        tags_data = validated_data.pop('tags', None)
-
-        instance.name = validated_data.get('name', instance.name)
-        instance.image = validated_data.get('image', instance.image)
-        instance.text = validated_data.get('text', instance.text)
-        instance.cooking_time = validated_data.get('cooking_time',
-                                                   instance.cooking_time)
-        instance.save()
-
-        if ingredients_data is not None:
-            instance.ingredients.clear()
-            for ingredient_data in ingredients_data:
-                ingredient, created = (
-                    Ingredient.objects.get_or_create(**ingredient_data))
-                instance.ingredients.add(ingredient)
-
-        if tags_data is not None:
-            instance.tags.clear()
-            for tag_data in tags_data:
-                tag, created = Tag.objects.get_or_create(**tag_data)
-                instance.tags.add(tag)
-        return instance
+    def get_is_in_shopping_cart(self, obj):
+        request = self.context.get('request')
+        return ShoppingCart.objects.filter(
+            user=request.user, recipe=obj).exists()
 
 
 class UserSerializer(serializers.ModelSerializer):
