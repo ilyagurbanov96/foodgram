@@ -4,6 +4,7 @@ from django.core.validators import EmailValidator, RegexValidator
 
 
 class User(AbstractUser):
+    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
     email = models.EmailField('Электронная почта', unique=True,
                               max_length=254, blank=False,
                               null=False, validators=[EmailValidator()],)

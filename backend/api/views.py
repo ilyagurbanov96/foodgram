@@ -1,17 +1,19 @@
 from rest_framework import viewsets, permissions, status, generics
 from rest_framework.response import Response
 from recipes.models import (User, Recipe, Tag, Ingredient,
-                            Favorite, ShoppingCart, Subscription)
+                            Favorite, ShoppingCart, Subscription,
+                            RecipeIngredient)
 from .serializers import (UserSerializer, RecipeSerializer,
                           TagSerializer, IngredientSerializer,
                           FavoriteSerializer, ShoppingCartSerializer,
                           SubscriptionSerializer, SubscribeSerializer)
 from .permissions import IsAuthorOrReadOnly
-from .filters import IngredientFilter
+from .filters import IngredientFilter, RecipeFilter
 from rest_framework.pagination import (LimitOffsetPagination,
                                        PageNumberPagination)
 from collections import defaultdict
 from django_filters.rest_framework import DjangoFilterBackend
+from django.shortcuts import get_object_or_404
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -27,9 +29,27 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthorOrReadOnly,
                           permissions.IsAuthenticatedOrReadOnly)
     pagination_class = LimitOffsetPagination
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = RecipeFilter
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        recipe = serializer.save(author=self.request.user)
+        tags_data = self.request.data.get('tags', [])
+        for tag_id in tags_data:
+            tag = get_object_or_404(Tag, id=tag_id)
+            recipe.tags.add(tag)
+        ingredients_data = self.request.data.get('ingredients', [])
+        for ingredient in ingredients_data:
+            ingredient_id = ingredient.get('id')
+            amount = ingredient.get('amount')
+            if ingredient_id is not None and amount is not None:
+                current_ingredient = get_object_or_404(Ingredient,
+                                                       id=ingredient_id)
+                RecipeIngredient.objects.create(
+                    ingredients=current_ingredient,
+                    recipe=recipe,
+                    amount=amount
+                )
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -39,18 +59,21 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return context
 
 
-class TagViewSet(viewsets.ReadOnlyModelViewSet):
+class TagViewSet(viewsets.ModelViewSet):  # (viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     pagination_class = None
+    permission_classes = [permissions.AllowAny]  # удалить
 
 
-class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
+class IngredientViewSet(viewsets.ModelViewSet):
+    # (viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = IngredientFilter
     pagination_class = None
+    permission_classes = [permissions.AllowAny]  # удалить
 
 
 class FavoriteViewSet(viewsets.ModelViewSet):

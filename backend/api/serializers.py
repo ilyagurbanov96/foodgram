@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from recipes.models import (Recipe, Ingredient,
                             Tag, Favorite,
-                            ShoppingCart, Subscription)
+                            ShoppingCart, Subscription,
+                            RecipeIngredient)
 from users.models import User
 import base64
 from django.core.files.base import ContentFile
@@ -37,7 +38,7 @@ class UserSerializer(serializers.ModelSerializer):
 class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ingredient
-        fields = '__all__'
+        fields = ('id', 'name', 'measurement_unit')
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -46,8 +47,17 @@ class TagSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'slug')
 
 
+class RecipeIngredientSerializer(serializers.ModelSerializer):
+    ingredient = IngredientSerializer(source='ingredients')
+
+    class Meta:
+        model = RecipeIngredient
+        fields = ('ingredient', 'amount')
+
+
 class RecipeSerializer(serializers.ModelSerializer):
-    ingredients = IngredientSerializer(read_only=True, many=True)
+    ingredients = RecipeIngredientSerializer(read_only=True, many=True,
+                                             source='recipe_ingredients')
     tags = TagSerializer(read_only=True, many=True)
     image = Base64ImageField()
     author = UserSerializer(read_only=True)
@@ -64,12 +74,17 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def get_is_favorited(self, obj):
         request = self.context.get('request')
-        return Favorite.objects.filter(user=request.user).exists()
+        if request and request.user.is_authenticated:
+            return Favorite.objects.filter(
+                user=request.user, recipe=obj).exists()
+        return False
 
     def get_is_in_shopping_cart(self, obj):
         request = self.context.get('request')
-        return ShoppingCart.objects.filter(
-            user=request.user, recipe=obj).exists()
+        if request and request.user.is_authenticated:
+            return ShoppingCart.objects.filter(
+                user=request.user, recipe=obj).exists()
+        return False
 
 
 class UserSerializer(serializers.ModelSerializer):
