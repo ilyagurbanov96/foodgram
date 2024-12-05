@@ -11,6 +11,7 @@ from .permissions import IsAuthorOrReadOnly
 from .filters import IngredientFilter, RecipeFilter
 from rest_framework.pagination import (LimitOffsetPagination,
                                        PageNumberPagination)
+from rest_framework.decorators import action
 from collections import defaultdict
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
@@ -50,6 +51,28 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     recipe=recipe,
                     amount=amount
                 )
+
+    @action(detail=True, methods=['post'], url_path='favorite')
+    def favorite(self, request, pk=None):
+        recipe = self.get_object()
+        user = request.user
+        if Favorite.objects.filter(user=user, recipe=recipe).exists():
+            return Response({'error': 'Рецепт уже в избранном'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        Favorite.objects.create(user=user, recipe=recipe)
+        return Response({'status': 'рецепт добавлен в избранное'},
+                        status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path='shopping_cart')
+    def shopping_cart(self, request, pk=None):
+        recipe = self.get_object()
+        user = request.user
+        if ShoppingCart.objects.filter(user=user, recipe=recipe).exists():
+            return Response({'error': 'Рецепт уже в корзине'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        ShoppingCart.objects.create(user=user, recipe=recipe)
+        return Response({'status': 'рецепт добавлен в корзину'},
+                        status=status.HTTP_201_CREATED)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
