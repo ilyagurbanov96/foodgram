@@ -8,7 +8,6 @@ from api.views import (UserViewSet, RecipeViewSet,
 from django.conf.urls.static import static
 from django.conf import settings
 
-
 router_v1 = DefaultRouter()
 
 router_v1.register(r'users', UserViewSet,
@@ -25,8 +24,12 @@ urlpatterns = [
     path('api/', include(router_v1.urls)),
     path('api/auth/', include('djoser.urls')),
     path('api/auth/', include('djoser.urls.authtoken')),
+    path('api/recipes/<int:pk>/get-link/', RecipeViewSet.as_view(
+        {'post': 'create_short_link', 'get': 'create_short_link'}),
+        name='get-link'),
     path('api/recipes/download_shopping_cart/', ShoppingCartViewSet.as_view(
-        {'get': 'download'}), name='download_shopping_cart'),
+        {'get': 'download'}),
+        name='download_shopping_cart'),
     path('api/users/<int:id>/subscribe/', SubscribeView.as_view(),
          name='subscribe'),
     path('api/users/subscriptions/', SubscriptionListView.as_view(),

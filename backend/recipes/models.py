@@ -3,6 +3,8 @@ from django.db import models
 from django.forms import ValidationError
 from django.core.validators import MinValueValidator
 from users.models import User
+import string
+import random
 
 
 class Tag(models.Model):
@@ -127,3 +129,17 @@ class Subscription(models.Model):
 
     def __str__(self):
         return f'{self.user.username} - {self.author.username}'
+
+
+class ShortLink(models.Model):
+    recipe = models.OneToOneField(Recipe, on_delete=models.CASCADE)
+    short_code = models.CharField(max_length=10, unique=True)
+
+    def save(self, *args, **kwargs):
+        if not self.short_code:
+            self.short_code = self.generate_short_code()
+        super().save(*args, **kwargs)
+
+    def generate_short_code(self):
+        characters = string.ascii_letters + string.digits
+        return ''.join(random.choices(characters, k=10))

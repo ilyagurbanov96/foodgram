@@ -2,11 +2,12 @@ from rest_framework import viewsets, permissions, status, generics
 from rest_framework.response import Response
 from recipes.models import (User, Recipe, Tag, Ingredient,
                             Favorite, ShoppingCart, Subscription,
-                            RecipeIngredient)
+                            RecipeIngredient, ShortLink)
 from .serializers import (UserSerializer, RecipeSerializer,
                           TagSerializer, IngredientSerializer,
                           FavoriteSerializer, ShoppingCartSerializer,
-                          SubscriptionSerializer, SubscribeSerializer)
+                          SubscriptionSerializer, SubscribeSerializer,
+                          ShortLinkSerializer)
 from .permissions import IsAuthorOrReadOnly
 from .filters import IngredientFilter, RecipeFilter
 from rest_framework.pagination import (LimitOffsetPagination,
@@ -52,6 +53,20 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     amount=amount
                 )
 
+    def create_short_link(self, request, pk=None):
+        try:
+            recipe = self.get_object()
+            short_link, created = ShortLink.objects.get_or_create(
+                recipe=recipe)
+            short_url = request.build_absolute_uri(
+                f"/api/recipes/links/{short_link.short_code}/")
+            return Response({'short-link': short_url},
+                            status=status.HTTP_201_CREATED
+                            if created else status.HTTP_200_OK)
+        except Recipe.DoesNotExist:
+            return Response({'error': 'Рецепт не найден'},
+                            status=status.HTTP_404_NOT_FOUND)
+
     @action(detail=True, methods=['post'], url_path='favorite')
     def favorite(self, request, pk=None):
         recipe = self.get_object()
@@ -82,21 +97,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return context
 
 
-class TagViewSet(viewsets.ModelViewSet):  # (viewsets.ReadOnlyModelViewSet):
+class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     pagination_class = None
-    permission_classes = [permissions.AllowAny]  # удалить
 
 
-class IngredientViewSet(viewsets.ModelViewSet):
-    # (viewsets.ReadOnlyModelViewSet):
+class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = IngredientFilter
     pagination_class = None
-    permission_classes = [permissions.AllowAny]  # удалить
 
 
 class FavoriteViewSet(viewsets.ModelViewSet):
@@ -133,6 +145,29 @@ class FavoriteViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Favorite.DoesNotExist:
             return Response({'detail': 'Избранное не найдено.'},
+                            status=status.HTTP_404_NOT_FOUND)
+
+
+class ShortLinkViewSet(viewsets.ViewSet):
+    serializer_class = ShortLinkSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def create(self, request, id=None):
+        try:
+            recipe = Recipe.objects.get(id=id)
+            short_link, created = ShortLink.objects.get_or_create(
+                recipe=recipe
+            )
+            short_url = request.build_absolute_uri(
+                f"/api/recipes/{short_link.short_code}/")
+            if created:
+                return Response({'short_link': short_url},
+                                status=status.HTTP_201_CREATED)
+            else:
+                return Response({'short_link': short_url},
+                                status=status.HTTP_200_OK)
+        except Recipe.DoesNotExist:
+            return Response({'error': 'Рецепт не найден'},
                             status=status.HTTP_404_NOT_FOUND)
 
 
