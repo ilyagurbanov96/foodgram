@@ -89,14 +89,26 @@ class RecipeSerializer(serializers.ModelSerializer):
                   'is_favorited', 'is_in_shopping_cart')
 
     def validate(self, data):
+        self.validate_tags()
+        self.validate_ingredients()
+        return data
+
+    def validate_tags(self):
         tags_data = self.context['request'].data.get('tags')
-        if tags_data is None or (isinstance(tags_data, list) and not tags_data
-                                 ):
+        if not tags_data or not isinstance(tags_data, list):
             raise serializers.ValidationError(
                 {'tags': 'Поле tags не может быть пустым'})
         if len(tags_data) != len(set(tags_data)):
             raise serializers.ValidationError(
                 {'tags': 'Теги не могут повторяться'})
+        invalid_tags = [tag_id for tag_id in tags_data
+                        if not Tag.objects.filter(id=tag_id).exists()]
+        if invalid_tags:
+            invalid_tags_str = ', '.join(map(str, invalid_tags))
+            raise serializers.ValidationError(
+                {'tags': f'Теги с id {invalid_tags_str} не существуют'})
+
+    def validate_ingredients(self):
         ingredients_data = self.context['request'].data.get('ingredients')
         if ingredients_data is None:
             raise serializers.ValidationError(
@@ -104,26 +116,25 @@ class RecipeSerializer(serializers.ModelSerializer):
         if not isinstance(ingredients_data, list) or not ingredients_data:
             raise serializers.ValidationError(
                 {'ingredients': 'Поле ingredients не может быть пустым'})
+
         ingredient_ids = set()
         for ingredient in ingredients_data:
             ingredient_id = ingredient.get('id')
             amount = ingredient.get('amount')
             if amount is None or amount < 1:
                 raise serializers.ValidationError(
-                    {'ingredients': '''Количество ингредиента
-                     должно быть больше 0'''})
+                    {'ingredients': '''
+                     Количество ингредиента должно быть больше 0'''})
             if ingredient_id in ingredient_ids:
                 raise serializers.ValidationError(
-                    {'ingredients': f'''Ингредиент с id
-                     {ingredient_id} уже добавлен'''})
+                    {'ingredients': f'''
+                     Ингредиент с id {ingredient_id} уже добавлен'''})
             ingredient_ids.add(ingredient_id)
-            try:
-                Ingredient.objects.get(id=ingredient_id)
-            except Ingredient.DoesNotExist:
+
+            if not Ingredient.objects.filter(id=ingredient_id).exists():
                 raise serializers.ValidationError(
-                    {'ingredients': f'''Ингредиент с id
-                     {ingredient_id} не найден'''})
-        return data
+                    {'ingredients': f'''
+                     Ингредиент с id {ingredient_id} не найден'''})
 
     def get_is_favorited(self, obj):
         request = self.context.get('request')
