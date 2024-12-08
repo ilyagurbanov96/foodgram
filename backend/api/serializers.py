@@ -203,6 +203,24 @@ class UserSerializer(serializers.ModelSerializer):
         return representation
 
 
+class SetPasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
+
+    def validate(self, attrs):
+        user = self.context['request'].user
+        current_password = attrs.get('current_password')
+        if not user.check_password(current_password):
+            raise serializers.ValidationError("Текущий пароль неверен.")
+        return attrs
+
+    def save(self):
+        user = self.context['request'].user
+        new_password = self.validated_data['new_password']
+        user.set_password(new_password)
+        user.save()
+
+
 class FavoriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Favorite

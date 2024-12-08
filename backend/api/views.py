@@ -7,7 +7,7 @@ from .serializers import (UserSerializer, RecipeSerializer,
                           TagSerializer, IngredientSerializer,
                           FavoriteSerializer, ShoppingCartSerializer,
                           SubscriptionSerializer, SubscribeSerializer,
-                          ShortLinkSerializer)
+                          ShortLinkSerializer, SetPasswordSerializer)
 from .permissions import IsAuthorOrReadOnly
 from .filters import IngredientFilter, RecipeFilter
 from rest_framework.pagination import LimitOffsetPagination
@@ -36,6 +36,15 @@ class UserViewSet(viewsets.ModelViewSet):
                 'avatar': user.avatar.url if user.avatar else None,
             }
             return Response(response_data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'], url_path='set_password')
+    def set_password(self, request):
+        serializer = SetPasswordSerializer(
+            data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get_queryset(self):
