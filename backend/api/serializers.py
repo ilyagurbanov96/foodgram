@@ -152,10 +152,14 @@ class RecipeSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    avatar = Base64ImageField(required=False)
+    is_subscribed = serializers.BooleanField(default=False)
+
     class Meta:
         model = User
         fields = ('id', 'email', 'username', 'first_name',
-                  'last_name', 'password')
+                  'last_name', 'password', 'avatar',
+                  'is_subscribed')
         extra_kwargs = {
             'password': {'write_only': True},
         }
@@ -178,13 +182,25 @@ class UserSerializer(serializers.ModelSerializer):
             'first_name', instance.first_name)
         instance.last_name = validated_data.get(
             'last_name', instance.last_name)
-
+        avatar = validated_data.get('avatar', None)
+        if avatar:
+            instance.avatar = avatar
         password = validated_data.get('password', None)
         if password:
             instance.set_password(password)
 
         instance.save()
         return instance
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        request = self.context.get('request')
+        if request.user.is_authenticated:
+            representation['is_subscribed'] = Subscription.objects.filter(
+                user=request.user, author=instance).exists()
+        else:
+            representation['is_subscribed'] = False
+        return representation
 
 
 class FavoriteSerializer(serializers.ModelSerializer):

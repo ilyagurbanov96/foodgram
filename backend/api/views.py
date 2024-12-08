@@ -10,8 +10,7 @@ from .serializers import (UserSerializer, RecipeSerializer,
                           ShortLinkSerializer)
 from .permissions import IsAuthorOrReadOnly
 from .filters import IngredientFilter, RecipeFilter
-from rest_framework.pagination import (LimitOffsetPagination,
-                                       PageNumberPagination)
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.decorators import action
 from collections import defaultdict
 from django_filters.rest_framework import DjangoFilterBackend
@@ -22,7 +21,39 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.AllowAny]
-    pagination_class = PageNumberPagination
+    pagination_class = LimitOffsetPagination
+
+    def get_object(self):
+        return self.request.user
+
+    @action(detail=False, methods=['put'], url_path='me/avatar')
+    def update_avatar(self, request):
+        user = self.get_object()
+        serializer = self.get_serializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            response_data = {
+                'avatar': user.avatar.url if user.avatar else None,
+            }
+            return Response(response_data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def get_queryset(self):
+        return self.queryset.filter(id=self.request.user.id)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', True)
+        instance = self.get_object()
+        serializer = self.get_serializer(
+            instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
+
+    def retrieve(self, request, *args, **kwargs):
+        user = self.get_object()
+        serializer = self.get_serializer(user)
+        return Response(serializer.data)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -78,7 +109,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return Response({'status': 'рецепт добавлен в избранное'},
                         status=status.HTTP_201_CREATED)
 
-    @action(detail=True, methods=['post'], url_path='shopping_cart')
+    @action(detail=True, methods=['patch'], url_path='shopping_cart')
     def shopping_cart(self, request, pk=None):
         recipe = self.get_object()
         user = request.user
