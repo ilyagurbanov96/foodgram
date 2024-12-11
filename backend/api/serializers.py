@@ -17,7 +17,45 @@ class Base64ImageField(serializers.ImageField):
         return super().to_internal_value(data)
 
 
-class UserSerializer(serializers.ModelSerializer):
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['email', 'username', 'first_name', 'last_name', 'password']
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError(
+                "Электронная почта уже существует."
+            )
+        return value
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError(
+                "Имя пользователя уже существует."
+            )
+        return value
+
+    def create(self, validated_data):
+        user = User(**validated_data)
+        user.set_password(validated_data['password'])
+        user.save()
+        return user
+
+
+class UserListSerializer(serializers.ModelSerializer):
+    avatar = Base64ImageField(required=False)
+
+    class Meta:
+        model = User
+        fields = ('id', 'email', 'username',
+                  'first_name', 'last_name', 'avatar')
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.BooleanField(default=False)
     avatar = Base64ImageField(required=False)
 
@@ -29,9 +67,13 @@ class UserSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         request = self.context.get('request')
-        if request.user.is_authenticated:
+        if request and request.user.is_authenticated:
             representation['is_subscribed'] = Subscription.objects.filter(
-                user=request.user, author=instance).exists()
+                user=request.user,
+                author=instance
+            ).exists()
+        else:
+            representation['is_subscribed'] = False
         return representation
 
 
@@ -76,7 +118,7 @@ class RecipeSerializer(serializers.ModelSerializer):
                                              source='recipe_ingredients')
     tags = TagSerializer(read_only=True, many=True)
     image = Base64ImageField()
-    author = UserSerializer(read_only=True)
+#    author = UserSerializer(read_only=True)
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
@@ -149,58 +191,6 @@ class RecipeSerializer(serializers.ModelSerializer):
             return ShoppingCart.objects.filter(
                 user=request.user, recipe=obj).exists()
         return False
-
-
-class UserSerializer(serializers.ModelSerializer):
-    avatar = Base64ImageField(required=False)
-    is_subscribed = serializers.BooleanField(default=False)
-
-    class Meta:
-        model = User
-        fields = ('id', 'email', 'username', 'first_name',
-                  'last_name', 'password', 'avatar',
-                  'is_subscribed')
-        extra_kwargs = {
-            'password': {'write_only': True},
-        }
-
-    def create(self, validated_data):
-        user = User(
-            email=validated_data['email'],
-            username=validated_data['username'],
-            first_name=validated_data['first_name'],
-            last_name=validated_data['last_name']
-        )
-        user.set_password(validated_data['password'])
-        user.save()
-        return user
-
-    def update(self, instance, validated_data):
-        instance.email = validated_data.get('email', instance.email)
-        instance.username = validated_data.get('username', instance.username)
-        instance.first_name = validated_data.get(
-            'first_name', instance.first_name)
-        instance.last_name = validated_data.get(
-            'last_name', instance.last_name)
-        avatar = validated_data.get('avatar', None)
-        if avatar:
-            instance.avatar = avatar
-        password = validated_data.get('password', None)
-        if password:
-            instance.set_password(password)
-
-        instance.save()
-        return instance
-
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        request = self.context.get('request')
-        if request.user.is_authenticated:
-            representation['is_subscribed'] = Subscription.objects.filter(
-                user=request.user, author=instance).exists()
-        else:
-            representation['is_subscribed'] = False
-        return representation
 
 
 class SetPasswordSerializer(serializers.Serializer):

@@ -3,11 +3,12 @@ from rest_framework.response import Response
 from recipes.models import (User, Recipe, Tag, Ingredient,
                             Favorite, ShoppingCart, Subscription,
                             RecipeIngredient, ShortLink)
-from .serializers import (UserSerializer, RecipeSerializer,
-                          TagSerializer, IngredientSerializer,
+from .serializers import (UserRegistrationSerializer, UserListSerializer,
+                          UserProfileSerializer, TagSerializer,
+                          IngredientSerializer, RecipeSerializer,
                           FavoriteSerializer, ShoppingCartSerializer,
                           SubscriptionSerializer, SubscribeSerializer,
-                          ShortLinkSerializer, SetPasswordSerializer)
+                          ShortLinkSerializer,)  # SetPasswordSerializer)
 from .permissions import IsAuthorOrReadOnly
 from .filters import IngredientFilter, RecipeFilter
 from rest_framework.pagination import LimitOffsetPagination
@@ -19,49 +20,31 @@ from django.shortcuts import get_object_or_404
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
-    serializer_class = UserSerializer
+    serializer_class = UserRegistrationSerializer
     permission_classes = [permissions.AllowAny]
     pagination_class = LimitOffsetPagination
 
-    def get_object(self):
-        return self.request.user
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = UserListSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
 
-    @action(detail=False, methods=['put'], url_path='me/avatar')
-    def update_avatar(self, request):
-        user = self.get_object()
-        serializer = self.get_serializer(user, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            response_data = {
-                'avatar': user.avatar.url if user.avatar else None,
-            }
-            return Response(response_data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=False, methods=['post'], url_path='set_password')
-    def set_password(self, request):
-        serializer = SetPasswordSerializer(
-            data=request.data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def get_queryset(self):
-        return self.queryset.filter(id=self.request.user.id)
-
-    def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', True)
-        instance = self.get_object()
-        serializer = self.get_serializer(
-            instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
+        serializer = UserListSerializer(queryset, many=True)
         return Response(serializer.data)
 
-    def retrieve(self, request, *args, **kwargs):
+    def create(self, request):
+        serializer = UserRegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            user_data = UserRegistrationSerializer(user).data  # Можно лист
+            return Response(user_data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def retrieve(self, request, pk=None):
         user = self.get_object()
-        serializer = self.get_serializer(user)
+        serializer = UserProfileSerializer(user, context={'request': request})
         return Response(serializer.data)
 
 
