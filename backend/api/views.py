@@ -8,7 +8,7 @@ from .serializers import (UserRegistrationSerializer, UserListSerializer,
                           IngredientSerializer, RecipeSerializer,
                           FavoriteSerializer, ShoppingCartSerializer,
                           SubscriptionSerializer, SubscribeSerializer,
-                          ShortLinkSerializer,)  # SetPasswordSerializer)
+                          ShortLinkSerializer, AvatarSerializer)
 from .permissions import IsAuthorOrReadOnly
 from .filters import IngredientFilter, RecipeFilter
 from rest_framework.pagination import LimitOffsetPagination
@@ -43,8 +43,26 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def retrieve(self, request, pk=None):
-        user = self.get_object()
-        serializer = UserProfileSerializer(user, context={'request': request})
+        if pk == 'me':
+            user = request.user
+            serializer = UserProfileSerializer(
+                user, context={'request': request}
+            )
+            return Response(serializer.data)
+        else:
+            user = self.get_object()
+            serializer = UserProfileSerializer(
+                user, context={'request': request}
+            )
+            return Response(serializer.data)
+
+    @action(detail=False, methods=['put'], url_path='me/avatar',
+            permission_classes=[permissions.IsAuthenticated])
+    def update_avatar(self, request):
+        user = request.user
+        serializer = AvatarSerializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
         return Response(serializer.data)
 
 

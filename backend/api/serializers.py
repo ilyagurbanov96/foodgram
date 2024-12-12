@@ -77,6 +77,14 @@ class UserProfileSerializer(serializers.ModelSerializer):
         return representation
 
 
+class AvatarSerializer(serializers.ModelSerializer):
+    avatar = Base64ImageField(required=True)
+
+    class Meta:
+        model = User
+        fields = ['avatar']
+
+
 class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ingredient
