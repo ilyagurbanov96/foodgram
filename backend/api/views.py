@@ -8,7 +8,8 @@ from .serializers import (UserRegistrationSerializer, UserListSerializer,
                           IngredientSerializer, RecipeSerializer,
                           FavoriteSerializer, ShoppingCartSerializer,
                           SubscriptionSerializer, SubscribeSerializer,
-                          ShortLinkSerializer, AvatarSerializer)
+                          ShortLinkSerializer, AvatarSerializer,
+                          SetPasswordSerializer)
 from .permissions import IsAuthorOrReadOnly
 from .filters import IngredientFilter, RecipeFilter
 from rest_framework.pagination import LimitOffsetPagination
@@ -44,26 +45,60 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def retrieve(self, request, pk=None):
         if pk == 'me':
+            if not request.user.is_authenticated:
+                return Response(
+                    {"detail": "Учетные данные не были предоставлены."},
+                    status=status.HTTP_401_UNAUTHORIZED)
             user = request.user
             serializer = UserProfileSerializer(
                 user, context={'request': request}
             )
             return Response(serializer.data)
         else:
-            user = self.get_object()
-            serializer = UserProfileSerializer(
-                user, context={'request': request}
-            )
+            try:
+                user = self.get_object()
+            except User.DoesNotExist:
+                return Response({"detail": "Пользователь не найден."},
+                                status=status.HTTP_404_NOT_FOUND)
+            serializer = UserProfileSerializer(user,
+                                               context={'request': request})
             return Response(serializer.data)
 
     @action(detail=False, methods=['put'], url_path='me/avatar',
             permission_classes=[permissions.IsAuthenticated])
     def update_avatar(self, request):
         user = request.user
+        if 'avatar' not in request.data:
+            return Response({"detail": "Поле 'avatar' обязательно."},
+                            status=status.HTTP_400_BAD_REQUEST)
         serializer = AvatarSerializer(user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['post'], url_path='set_password',
+            permission_classes=[permissions.IsAuthenticated])
+    def set_password(self, request):
+        serializer = SetPasswordSerializer(
+            data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(status=204)
+        return Response(serializer.errors, status=400)
+
+    @action(detail=False, methods=['delete'], url_path='me/avatar',
+            permission_classes=[permissions.IsAuthenticated])
+    def delete_avatar(self, request):
+        user = request.user
+
+        if user.avatar:
+            user.avatar.delete(save=False)
+            user.avatar = None
+            user.save()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        return Response({"detail": "Учетные данные не были предоставлены."},
+                        status=status.HTTP_404_NOT_FOUND)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
