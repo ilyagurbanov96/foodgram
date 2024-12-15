@@ -20,7 +20,8 @@ class Base64ImageField(serializers.ImageField):
 class UserRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['email', 'username', 'first_name', 'last_name', 'password']
+        fields = ['id', 'email', 'username',
+                  'first_name', 'last_name', 'password']
         extra_kwargs = {
             'password': {'write_only': True}
         }
@@ -126,7 +127,7 @@ class RecipeSerializer(serializers.ModelSerializer):
                                              source='recipe_ingredients')
     tags = TagSerializer(read_only=True, many=True)
     image = Base64ImageField()
-#    author = UserSerializer(read_only=True)
+    author = UserProfileSerializer(read_only=True)
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
@@ -223,6 +224,12 @@ class FavoriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Favorite
         fields = '__all__'
+
+
+class FavoriteRecipeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
 
 
 class ShoppingCartSerializer(serializers.ModelSerializer):

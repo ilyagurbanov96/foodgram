@@ -9,12 +9,11 @@ from .serializers import (UserRegistrationSerializer, UserListSerializer,
                           FavoriteSerializer, ShoppingCartSerializer,
                           SubscriptionSerializer, SubscribeSerializer,
                           ShortLinkSerializer, AvatarSerializer,
-                          SetPasswordSerializer)
+                          SetPasswordSerializer,)  # FavoriteRecipeSerializer)
 from .permissions import IsAuthorOrReadOnly
 from .filters import IngredientFilter, RecipeFilter
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.decorators import action
-from collections import defaultdict
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
 
@@ -90,13 +89,11 @@ class UserViewSet(viewsets.ModelViewSet):
             permission_classes=[permissions.IsAuthenticated])
     def delete_avatar(self, request):
         user = request.user
-
         if user.avatar:
             user.avatar.delete(save=False)
             user.avatar = None
             user.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
-
         return Response({"detail": "Учетные данные не были предоставлены."},
                         status=status.HTTP_404_NOT_FOUND)
 
@@ -143,17 +140,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Рецепт не найден'},
                             status=status.HTTP_404_NOT_FOUND)
 
-    @action(detail=True, methods=['post'], url_path='favorite')
-    def favorite(self, request, pk=None):
-        recipe = self.get_object()
-        user = request.user
-        if Favorite.objects.filter(user=user, recipe=recipe).exists():
-            return Response({'error': 'Рецепт уже в избранном'},
-                            status=status.HTTP_400_BAD_REQUEST)
-        Favorite.objects.create(user=user, recipe=recipe)
-        return Response({'status': 'рецепт добавлен в избранное'},
-                        status=status.HTTP_201_CREATED)
-
     @action(detail=True, methods=['patch'], url_path='shopping_cart')
     def shopping_cart(self, request, pk=None):
         recipe = self.get_object()
@@ -171,6 +157,27 @@ class RecipeViewSet(viewsets.ModelViewSet):
             'request': self.request
         })
         return context
+
+    @action(detail=True, methods=['post'], url_path='favorite',
+            permission_classes=[permissions.IsAuthenticated])
+    def favorite(self, request, pk=None):
+        recipe = self.get_object()
+        user = request.user
+        favorite, created = Favorite.objects.get_or_create(user=user,
+                                                           recipe=recipe)
+
+        if created:
+            favorite_recipe_data = {
+                "id": recipe.id,
+                "name": recipe.name,
+                "image": request.build_absolute_uri(recipe.image.url),
+                "cooking_time": recipe.cooking_time
+            }
+            return Response(favorite_recipe_data,
+                            status=status.HTTP_201_CREATED)
+        else:
+            return Response({'detail': 'Recipe is already in favorites.'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -254,49 +261,30 @@ class ShoppingCartViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return ShoppingCart.objects.filter(user=self.request.user)
 
-    def create(self, request, *args, **kwargs):
-        recipe_id = request.data.get('recipe')
-        try:
-            recipe = Recipe.objects.get(id=recipe_id)
-        except Recipe.DoesNotExist:
-            return Response({'detail': 'Рецепт не найден.'}, status=404)
+    def create(self, request, recipe_id):
+        recipe = get_object_or_404(Recipe, id=recipe_id)
 
         shopping_cart_item, created = ShoppingCart.objects.get_or_create(
-            user=request.user, recipe=recipe)
+            user=request.user, recipe=recipe
+        )
         if created:
-            return Response(ShoppingCartSerializer(shopping_cart_item).data,
-                            status=201)
+            response_data = {
+                "id": recipe.id,
+                "name": recipe.name,
+                "image": request.build_absolute_uri(recipe.image.url),
+                "cooking_time": recipe.cooking_time
+            }
+            return Response(response_data, status=status.HTTP_201_CREATED)
         else:
             return Response({'detail': 'Рецепт уже в списке покупок.'},
-                            status=400)
+                            status=status.HTTP_400_BAD_REQUEST)
 
-    def destroy(self, request, *args, **kwargs):
-        recipe_id = kwargs.get('pk')
-        try:
-            shopping_cart_item = ShoppingCart.objects.get(user=request.user,
-                                                          recipe_id=recipe_id)
-            shopping_cart_item.delete()
-            return Response(status=204)
-        except ShoppingCart.DoesNotExist:
-            return Response({'detail': 'Товар в корзине не найден.'},
-                            status=404)
-
-    def download(self, request):
-        shopping_items = self.get_queryset()
-        ingredients = defaultdict(int)
-
-        for item in shopping_items:
-            for ingredient in item.recipe.ingredients:
-                ingredients[ingredient['name']] += ingredient['amount']
-
-        response = Response(content_type='text/plain')
-        response['Content-Disposition'] = '''attachment;
-        filename="shopping_cart.txt"'''
-
-        for name, amount in ingredients.items():
-            response.write(f"{name} — {amount}\n")
-
-        return response
+    def destroy(self, request, recipe_id):
+        shopping_cart_item = get_object_or_404(
+            ShoppingCart, user=request.user, recipe_id=recipe_id)
+        shopping_cart_item.delete()
+        return Response({'detail': 'Рецепт удален из списка покупок.'},
+                        status=status.HTTP_204_NO_CONTENT)
 
 
 class SubscribeView(generics.CreateAPIView):
