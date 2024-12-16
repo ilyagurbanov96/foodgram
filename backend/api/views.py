@@ -7,9 +7,9 @@ from .serializers import (UserRegistrationSerializer, UserListSerializer,
                           UserProfileSerializer, TagSerializer,
                           IngredientSerializer, RecipeSerializer,
                           FavoriteSerializer, ShoppingCartSerializer,
-                          SubscriptionSerializer, SubscribeSerializer,
+                          SubscriptionSerializer, UserSubscribeSerializer,
                           ShortLinkSerializer, AvatarSerializer,
-                          SetPasswordSerializer,)  # FavoriteRecipeSerializer)
+                          SetPasswordSerializer)  # FavoriteRecipeSerializer)
 from .permissions import IsAuthorOrReadOnly
 from .filters import IngredientFilter, RecipeFilter
 from rest_framework.pagination import LimitOffsetPagination
@@ -254,54 +254,37 @@ class ShortLinkViewSet(viewsets.ViewSet):
                             status=status.HTTP_404_NOT_FOUND)
 
 
-class ShoppingCartViewSet(viewsets.ModelViewSet):
+class ShoppingCartViewSet(viewsets.ViewSet):
     serializer_class = ShoppingCartSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        return ShoppingCart.objects.filter(user=self.request.user)
-
-    def create(self, request, recipe_id):
-        recipe = get_object_or_404(Recipe, id=recipe_id)
-
+    def create(self, request, recipe_id=None):
+        try:
+            recipe = Recipe.objects.get(id=recipe_id)
+        except Recipe.DoesNotExist:
+            return Response({'detail': 'Рецепт не найден.'},
+                            status=status.HTTP_404_NOT_FOUND)
         shopping_cart_item, created = ShoppingCart.objects.get_or_create(
-            user=request.user, recipe=recipe
-        )
-        if created:
-            response_data = {
-                "id": recipe.id,
-                "name": recipe.name,
-                "image": request.build_absolute_uri(recipe.image.url),
-                "cooking_time": recipe.cooking_time
-            }
-            return Response(response_data, status=status.HTTP_201_CREATED)
-        else:
-            return Response({'detail': 'Рецепт уже в списке покупок.'},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-    def destroy(self, request, recipe_id):
-        shopping_cart_item = get_object_or_404(
-            ShoppingCart, user=request.user, recipe_id=recipe_id)
-        shopping_cart_item.delete()
-        return Response({'detail': 'Рецепт удален из списка покупок.'},
-                        status=status.HTTP_204_NO_CONTENT)
+            user=request.user, recipe=recipe)
+        serializer = ShoppingCartSerializer(shopping_cart_item)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-class SubscribeView(generics.CreateAPIView):
-    serializer_class = SubscribeSerializer
+class SubscribeViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
-    def perform_create(self, serializer):
-        author_id = self.request.data.get('author')
-        user = self.request.user
-
-        if Subscription.objects.filter(user=user,
-                                       author_id=author_id).exists():
-            return Response({
-                "detail": "Вы уже подписаны на этого пользователя."},
-                status=status.HTTP_400_BAD_REQUEST)
-
-        serializer.save(user=user, author_id=author_id)
+    def create(self, request, id=None):
+        author_to_subscribe = get_object_or_404(User, id=id)
+        if request.user.subscriptions.filter(author=author_to_subscribe
+                                             ).exists():
+            return Response({'detail': '''Вы уже подписаны на
+                             этого пользователя.'''},
+                            status=status.HTTP_400_BAD_REQUEST)
+        Subscription.objects.create(user=request.user,
+                                    author=author_to_subscribe)
+        serializer = UserSubscribeSerializer(author_to_subscribe,
+                                             context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class SubscriptionListView(generics.ListAPIView):

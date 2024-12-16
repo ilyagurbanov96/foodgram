@@ -78,6 +78,46 @@ class UserProfileSerializer(serializers.ModelSerializer):
         return representation
 
 
+class UserSubscribeSerializer(serializers.ModelSerializer):
+    is_subscribed = serializers.BooleanField(default=False)
+    avatar = Base64ImageField(required=False)
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ('id', 'email', 'username', 'is_subscribed',
+                  'first_name', 'last_name', 'avatar',
+                  'recipes', 'recipes_count')
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            representation['is_subscribed'] = Subscription.objects.filter(
+                user=request.user,
+                author=instance
+            ).exists()
+        else:
+            representation['is_subscribed'] = False
+        return representation
+
+    def get_recipes(self, obj):
+        request = self.context.get('request')
+        recipes_limit = request.query_params.get('recipes_limit', None)
+        recipes = Recipe.objects.filter(author=obj)
+        if recipes_limit is not None:
+            try:
+                recipes_limit = int(recipes_limit)
+                recipes = recipes[:recipes_limit]
+            except ValueError:
+                pass
+        return RecipeSubscribeSerializer(recipes, many=True).data
+
+    def get_recipes_count(self, obj):
+        return Recipe.objects.filter(author=obj).count()
+
+
 class AvatarSerializer(serializers.ModelSerializer):
     avatar = Base64ImageField(required=True)
 
@@ -202,6 +242,12 @@ class RecipeSerializer(serializers.ModelSerializer):
         return False
 
 
+class RecipeSubscribeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
+
+
 class SetPasswordSerializer(serializers.Serializer):
     current_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)
@@ -233,9 +279,11 @@ class FavoriteRecipeSerializer(serializers.ModelSerializer):
 
 
 class ShoppingCartSerializer(serializers.ModelSerializer):
+    recipe = RecipeSerializer(read_only=True)
+
     class Meta:
         model = ShoppingCart
-        fields = '__all__'
+        fields = ('id', 'recipe')
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
