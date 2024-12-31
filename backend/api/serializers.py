@@ -237,15 +237,3 @@ class SetPasswordSerializer(serializers.Serializer):
         new_password = self.validated_data['new_password']
         user.set_password(new_password)
         user.save()
-
-
-class FavoriteRecipeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Recipe
-        fields = ('id', 'name', 'image', 'cooking_time')
-
-
-class ShoppingCartSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Recipe
-        fields = ('id', 'name', 'image', 'cooking_time')
