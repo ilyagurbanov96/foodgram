@@ -220,6 +220,20 @@ class UserSubscribeSerializer(serializers.ModelSerializer):
                                                author=obj).exists()
         return False
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        recipes_data = representation.pop('recipes')
+        formatted_recipes = []
+        for recipe in recipes_data:
+            formatted_recipes.append({
+                'id': recipe['id'],
+                'name': recipe['name'],
+                'image': recipe['image'],
+                'cooking_time': recipe['cooking_time']
+            })
+        representation['recipes'] = formatted_recipes
+        return representation
+
 
 class SetPasswordSerializer(serializers.Serializer):
     current_password = serializers.CharField(required=True)

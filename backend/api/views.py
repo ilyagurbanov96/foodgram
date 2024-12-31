@@ -8,7 +8,8 @@ from recipes.models import (User, Recipe,
 from .serializers import (UserRegistrationSerializer, UserListSerializer,
                           UserProfileSerializer, TagSerializer,
                           IngredientSerializer, RecipeSerializer,
-                          AvatarSerializer, SetPasswordSerializer)
+                          AvatarSerializer, SetPasswordSerializer,
+                          UserSubscribeSerializer)
 from .permissions import IsAuthorOrReadOnly
 from .filters import IngredientFilter, RecipeFilter
 from rest_framework.pagination import LimitOffsetPagination
@@ -166,6 +167,24 @@ class UserViewSet(viewsets.ModelViewSet):
             "avatar": self.request.build_absolute_uri(
                 author.avatar.url) if author.avatar else None
         }, status=response_status)
+
+    @action(
+        detail=False,
+        methods=['get',],
+        url_path='subscriptions',
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    def subscriptions(self, request):
+        user = request.user
+        subscriptions = Subscription.objects.filter(
+            user=user).select_related('author')
+        paginator = self.pagination_class()
+        paginated_subscriptions = paginator.paginate_queryset(
+            subscriptions, request)
+        serializer = UserSubscribeSerializer(
+            [sub.author for sub in paginated_subscriptions], many=True,
+            context={'request': request})
+        return paginator.get_paginated_response(serializer.data)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
