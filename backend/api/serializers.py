@@ -202,39 +202,6 @@ class RecipeSerializer(serializers.ModelSerializer):
         return False
 
 
-class UserSubscribeSerializer(serializers.ModelSerializer):
-    is_subscribed = serializers.SerializerMethodField()
-    recipes = RecipeSerializer(many=True, read_only=True)
-    recipes_count = serializers.IntegerField(source='recipes.count',
-                                             read_only=True)
-
-    class Meta:
-        model = User
-        fields = ['id', 'email', 'username', 'first_name', 'last_name',
-                  'is_subscribed', 'recipes', 'recipes_count', 'avatar']
-
-    def get_is_subscribed(self, obj):
-        request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return Subscription.objects.filter(user=request.user,
-                                               author=obj).exists()
-        return False
-
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        recipes_data = representation.pop('recipes')
-        formatted_recipes = []
-        for recipe in recipes_data:
-            formatted_recipes.append({
-                'id': recipe['id'],
-                'name': recipe['name'],
-                'image': recipe['image'],
-                'cooking_time': recipe['cooking_time']
-            })
-        representation['recipes'] = formatted_recipes
-        return representation
-
-
 class SetPasswordSerializer(serializers.Serializer):
     current_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)
