@@ -263,10 +263,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def shopping_cart(self, request, pk=None):
         recipe = self.get_object()
         user = request.user
-        shopping_cart, created = ShoppingCart.objects.get_or_create(
-            user=user, recipe=recipe
-        )
         if request.method == 'POST':
+            shopping_cart, created = ShoppingCart.objects.get_or_create(
+                user=user, recipe=recipe)
             if created:
                 shopping_cart_data = {
                     "id": recipe.id,
@@ -288,7 +287,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                                 status=status.HTTP_204_NO_CONTENT)
             else:
                 return Response({'detail': 'Рецепт не найден в корзине.'},
-                                status=status.HTTP_404_NOT_FOUND)
+                                status=status.HTTP_400_BAD_REQUEST)
 
     @action(
         detail=False,
@@ -350,7 +349,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                                 status=status.HTTP_204_NO_CONTENT)
             else:
                 return Response({'detail': 'Рецепт не найден в избранном.'},
-                                status=status.HTTP_404_NOT_FOUND)
+                                status=status.HTTP_400_BAD_REQUEST)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):

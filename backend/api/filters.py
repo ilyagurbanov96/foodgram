@@ -1,5 +1,5 @@
 import django_filters
-from recipes.models import Ingredient, Recipe, ShoppingCart
+from recipes.models import Ingredient, Recipe, ShoppingCart, Tag
 
 
 class IngredientFilter(django_filters.FilterSet):
@@ -11,8 +11,11 @@ class IngredientFilter(django_filters.FilterSet):
 
 
 class RecipeFilter(django_filters.FilterSet):
-    tags = django_filters.BaseInFilter(field_name='tags__slug',
-                                       lookup_expr='in')
+    tags = django_filters.ModelMultipleChoiceFilter(
+        field_name='tags__slug',
+        queryset=Tag.objects.all(),
+        to_field_name='slug',
+    )
     author = django_filters.CharFilter(lookup_expr='exact')
     is_in_shopping_cart = django_filters.CharFilter(
         method='filter_is_in_shopping_cart')
