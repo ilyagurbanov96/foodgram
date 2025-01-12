@@ -167,34 +167,26 @@ class RecipeSerializer(serializers.ModelSerializer):
         if not isinstance(ingredients_data, list) or not ingredients_data:
             raise serializers.ValidationError(
                 {'ingredients': 'Поле ingredients не может быть пустым'})
-
         ingredient_ids = set()
         for ingredient in ingredients_data:
             ingredient_id = ingredient.get('id')
             amount = ingredient.get('amount')
-            if amount is None or amount <= 1:
+            if amount is None or not amount.isdigit() or int(amount) < 1:
                 raise serializers.ValidationError(
-                    {'ingredients': '''Количество ингредиента
-                     должно быть больше 1'''}
-                )
-            try:
-                ingredient_id = int(ingredient_id)
-            except (ValueError, TypeError):
-                raise serializers.ValidationError(
-                    {'ingredients': f'''Ингредиент с id {ingredient_id}
-                     имеет неверный формат'''}
-                )
+                    {'ingredients': '''
+                    Количество ингредиента должно быть больше 0'''})
             if ingredient_id in ingredient_ids:
                 raise serializers.ValidationError(
-                    {'ingredients': f'''Ингредиент с id {ingredient_id}
-                     уже добавлен'''}
-                )
+                    {'ingredients': f'''
+                    Ингредиент с id {ingredient_id} уже добавлен'''})
             ingredient_ids.add(ingredient_id)
 
-            if not Ingredient.objects.filter(id=ingredient_id).exists():
+            if not ingredient_id.isdigit() or not Ingredient.objects.filter(
+                id=int(ingredient_id)
+            ).exists():
                 raise serializers.ValidationError(
                     {'ingredients': f'''
-                     Ингредиент с id {ingredient_id} не найден'''})
+                    Ингредиент с id {ingredient_id} не найден'''})
 
     def get_is_favorited(self, obj):
         request = self.context.get('request')
