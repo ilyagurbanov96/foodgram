@@ -171,7 +171,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         for ingredient in ingredients_data:
             ingredient_id = ingredient.get('id')
             amount = ingredient.get('amount')
-            if amount is None or not amount.isdigit() or int(amount) < 1:
+            if amount is None or not str(amount).isdigit() or int(amount) < 1:
                 raise serializers.ValidationError(
                     {'ingredients': '''
                     Количество ингредиента должно быть больше 0'''})
@@ -180,10 +180,13 @@ class RecipeSerializer(serializers.ModelSerializer):
                     {'ingredients': f'''
                     Ингредиент с id {ingredient_id} уже добавлен'''})
             ingredient_ids.add(ingredient_id)
-
-            if not ingredient_id.isdigit() or not Ingredient.objects.filter(
-                id=int(ingredient_id)
-            ).exists():
+            try:
+                ingredient_id = int(ingredient_id)
+            except ValueError:
+                raise serializers.ValidationError(
+                    {'ingredients': f'''
+                    Ингредиент с id {ingredient_id} не найден'''})
+            if not Ingredient.objects.filter(id=ingredient_id).exists():
                 raise serializers.ValidationError(
                     {'ingredients': f'''
                     Ингредиент с id {ingredient_id} не найден'''})

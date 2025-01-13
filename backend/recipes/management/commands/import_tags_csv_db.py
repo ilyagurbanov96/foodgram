@@ -7,7 +7,12 @@ class Command(BaseCommand):
     help = 'Импорт тегов из CSV файла'
 
     def add_arguments(self, parser):
-        parser.add_argument('csv_file', type=str, help='Путь к CSV файлу')
+        parser.add_argument(
+            '--csv_file',
+            type=str,
+            default='data/tags.csv',
+            help='Путь к CSV файлу'
+        )
 
     def handle(self, *args, **kwargs):
         csv_file = kwargs['csv_file']
