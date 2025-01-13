@@ -242,6 +242,28 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     amount=amount
                 )
 
+    def perform_update(self, serializer):
+        recipe = self.get_object()
+        tags_data = self.request.data.get('tags', [])
+        ingredients_data = self.request.data.get('ingredients', [])
+        recipe.tags.clear()
+        for tag_id in tags_data:
+            tag = get_object_or_404(Tag, id=tag_id)
+            recipe.tags.add(tag)
+        RecipeIngredient.objects.filter(recipe=recipe).delete()
+        for ingredient in ingredients_data:
+            ingredient_id = ingredient.get('id')
+            amount = ingredient.get('amount')
+            if ingredient_id is not None and amount is not None:
+                current_ingredient = get_object_or_404(
+                    Ingredient, id=ingredient_id)
+                RecipeIngredient.objects.create(
+                    ingredients=current_ingredient,
+                    recipe=recipe,
+                    amount=amount
+                )
+        serializer.save()
+
     @action(
         detail=True,
         methods=['post', 'get'],
