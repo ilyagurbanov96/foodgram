@@ -1,21 +1,19 @@
-from rest_framework import viewsets, permissions, status
-from rest_framework.response import Response
-from recipes.models import (User, Recipe,
-                            Tag, Ingredient,
-                            Favorite, ShoppingCart,
-                            RecipeIngredient, ShortLink,
-                            Subscription)
-from .serializers import (UserRegistrationSerializer, UserListSerializer,
-                          UserProfileSerializer, TagSerializer,
-                          IngredientSerializer, RecipeSerializer,
-                          AvatarSerializer, SetPasswordSerializer)
-from .permissions import IsAuthorOrReadOnly
-from .filters import IngredientFilter, RecipeFilter
-from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.decorators import action
-from django_filters.rest_framework import DjangoFilterBackend
-from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                            ShoppingCart, ShortLink, Subscription, Tag, User)
+from rest_framework import permissions, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.response import Response
+
+from .filters import IngredientFilter, RecipeFilter
+from .permissions import IsAuthorOrReadOnly
+from .serializers import (AvatarSerializer, IngredientSerializer,
+                          RecipeSerializer, SetPasswordSerializer,
+                          TagSerializer, UserListSerializer,
+                          UserProfileSerializer, UserRegistrationSerializer)
 
 
 class UserViewSet(viewsets.ModelViewSet):
