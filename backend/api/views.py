@@ -168,7 +168,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=False,
-        methods=['get',],
+        methods=['get', ],
         url_path='subscriptions',
         permission_classes=[permissions.IsAuthenticated],
     )
