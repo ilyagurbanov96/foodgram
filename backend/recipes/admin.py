@@ -6,7 +6,6 @@ from .models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                      ShoppingCart, Subscription, Tag)
 
 admin.site.unregister(Group)
-admin.site.unregister(User)
 
 
 @admin.register(User)
