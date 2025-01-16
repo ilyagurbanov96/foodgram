@@ -1,12 +1,13 @@
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django_filters.rest_framework import DjangoFilterBackend
-from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
-                            ShoppingCart, ShortLink, Subscription, Tag, User)
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
+
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                            ShoppingCart, ShortLink, Subscription, Tag, User)
 
 from .filters import IngredientFilter, RecipeFilter
 from .permissions import IsAuthorOrReadOnly
@@ -271,7 +272,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         recipe = get_object_or_404(Recipe, pk=pk)
         short_link, created = ShortLink.objects.get_or_create(recipe=recipe)
         short_url = request.build_absolute_uri(
-            f"/api/recipes/links/{short_link.short_code}/")
+            f"/s/{short_link.short_code}/")
         return Response({'short-link': short_url}, status=status.HTTP_200_OK)
 
     @action(
@@ -370,6 +371,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
             else:
                 return Response({'detail': 'Рецепт не найден в избранном.'},
                                 status=status.HTTP_400_BAD_REQUEST)
+
+
+class ShortLinkViewSet(viewsets.ViewSet):
+    @action(detail=False, methods=['get'], url_path='s/(?P<short_code>[^/.]+)')
+    def redirect(self, request, short_code=None):
+        short_link = get_object_or_404(ShortLink, short_code=short_code)
+        return redirect(short_link.recipe.get_absolute_url())
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
