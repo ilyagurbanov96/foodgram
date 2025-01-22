@@ -1,12 +1,17 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
-from django.core.exceptions import ValidationError
 
 from .models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                      ShoppingCart, Subscription, Tag, User)
 
 admin.site.unregister(Group)
+
+
+class IngredientsInline(admin.TabularInline):
+    model = RecipeIngredient
+    extra = 1
+    min_num = 1
 
 
 @admin.register(User)
@@ -64,30 +69,18 @@ class IngredientAdmin(admin.ModelAdmin):
     list_filter = ('measurement_unit',)
 
 
-class RecipeIngredientInline(admin.TabularInline):
-    model = RecipeIngredient
-
-
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     search_fields = ('name', )
     list_display = (
         'id', 'author', 'name', 'image', 'text', 'favorite_count')
     list_display_links = ('id', 'name')
-    inlines = [
-        RecipeIngredientInline,
-    ]
+    inlines = [IngredientsInline]
 
     @admin.display(description='Кол-во добавлений в Избранное')
     def favorite_count(self, obj):
         count = obj.favorites.count()
         return f"{count} {'раз' if count != 1 else 'раза'}"
-
-    def clean(self):
-        super().clean()
-        if not self.recipe_ingredients.exists():
-            raise ValidationError('''Рецепт должен содержать
-                                  хотя бы один ингредиент.''')
 
 
 @admin.register(RecipeIngredient)
