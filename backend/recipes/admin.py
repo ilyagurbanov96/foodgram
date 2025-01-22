@@ -1,23 +1,24 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.models import Group
+from django.core.exceptions import ValidationError
 
 from .models import (Favorite, Ingredient, Recipe, RecipeIngredient,
-                     ShoppingCart, Subscription, Tag)
+                     ShoppingCart, Subscription, Tag, User)
 
 admin.site.unregister(Group)
 
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ('id', 'email', 'username',
-                    'first_name', 'last_name', 'favorite_count')
+    list_display = ('id', 'email', 'username', 'first_name', 'last_name')
     search_fields = ('username', 'email', 'first_name', 'last_name')
     list_filter = ('username', 'email')
 
-    @admin.display(description='Кол-во добавлений в Избранное')
-    def favorite_count(self, obj):
-        return obj.favorite_set.count()
+    fieldsets = BaseUserAdmin.fieldsets + (
+        (None, {'fields': ('avatar',)}),
+    )
+    add_fieldsets = BaseUserAdmin.add_fieldsets
 
 
 @admin.register(Subscription)
@@ -71,16 +72,22 @@ class RecipeIngredientInline(admin.TabularInline):
 class RecipeAdmin(admin.ModelAdmin):
     search_fields = ('name', )
     list_display = (
-        'id', 'author', 'name', 'image', 'text')
+        'id', 'author', 'name', 'image', 'text', 'favorite_count')
     list_display_links = ('id', 'name')
     inlines = [
         RecipeIngredientInline,
     ]
 
-    def save_model(self, request, obj, form, change):
-        if not obj.recipeingredient_set.exists():
-            raise ValueError('Рецепт должен иметь хотя бы один ингредиент')
-        super().save_model(request, obj, form, change)
+    @admin.display(description='Кол-во добавлений в Избранное')
+    def favorite_count(self, obj):
+        count = obj.favorites.count()
+        return f"{count} {'раз' if count != 1 else 'раза'}"
+
+    def clean(self):
+        super().clean()
+        if not self.recipe_ingredients.exists():
+            raise ValidationError('''Рецепт должен содержать
+                                  хотя бы один ингредиент.''')
 
 
 @admin.register(RecipeIngredient)

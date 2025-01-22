@@ -141,6 +141,9 @@ class ShortLink(models.Model):
             self.short_code = self.generate_short_code()
         super().save(*args, **kwargs)
 
-    def generate_short_code(self):
+    def generate_short_code(self, length=10):
         characters = string.ascii_letters + string.digits
-        return ''.join(random.choices(characters, k=10))
+        while True:
+            short_code = ''.join(random.choices(characters, k=length))
+            if not ShortLink.objects.filter(short_code=short_code).exists():
+                return short_code

@@ -1,5 +1,4 @@
 import django_filters
-
 from recipes.models import Ingredient, Recipe, ShoppingCart, Tag
 
 

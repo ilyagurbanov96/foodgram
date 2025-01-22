@@ -168,13 +168,15 @@ class RecipeSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {'ingredients': 'Поле ingredients не может быть пустым'})
         ingredient_ids = set()
+        error_message = []
+        error = False
         for ingredient in ingredients_data:
             ingredient_id = ingredient.get('id')
             amount = ingredient.get('amount')
             if amount is None or not str(amount).isdigit() or int(amount) < 1:
-                raise serializers.ValidationError(
-                    {'ingredients': '''
-                    Количество ингредиента должно быть больше 0'''})
+                error_message.append('''Количество ингредиента
+                                     не может быть равен 0''')
+                error = True
             if ingredient_id in ingredient_ids:
                 raise serializers.ValidationError(
                     {'ingredients': f'''
@@ -190,6 +192,11 @@ class RecipeSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {'ingredients': f'''
                     Ингредиент с id {ingredient_id} не найден'''})
+        if error:
+            raise serializers.ValidationError(
+                {'ingredients': [
+                    {'любая шляпа': error_message},
+                ]})
 
     def get_is_favorited(self, obj):
         request = self.context.get('request')
