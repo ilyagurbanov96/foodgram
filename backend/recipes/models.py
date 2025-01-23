@@ -56,7 +56,7 @@ class Recipe(models.Model):
         ])
 
     def get_absolute_url(self):
-        return reverse('recipe', kwargs={'pk': self.pk})
+        return reverse('recipe-detail', kwargs={'pk': self.pk})
 
     class Meta:
         verbose_name = 'рецепт'
