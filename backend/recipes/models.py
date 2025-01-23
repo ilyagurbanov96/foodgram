@@ -148,7 +148,7 @@ class ShortLink(models.Model):
         if not self.short_code:
             self.short_code = self.generate_short_code()
         super().save(*args, **kwargs)
-    
+
     class Meta:
         verbose_name = 'Короткая ссылка'
         verbose_name_plural = 'Короткие ссылки'
