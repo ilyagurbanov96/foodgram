@@ -268,14 +268,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
         methods=['post', 'get'],
         url_path='get-link'
     )
-    def create_short_link(self, request, pk=None):
-        recipe = get_object_or_404(Recipe, pk=pk)
-        short_link, created = ShortLink.objects.get_or_create(recipe=recipe)
-        if created:
-            short_link.short_code = short_link.generate_short_code()
-            short_link.save()
-        short_url = request.build_absolute_uri(f"/s/{short_link.short_code}/")
-        return Response({'short-link': short_url}, status=status.HTTP_200_OK)
+    def get_link(self, request, pk=None):
+        url = request.build_absolute_uri(f'/recipes/{pk}/')
+        short_link, created = ShortLink.objects.get_or_create(original_url=url)
+        base_url = request.build_absolute_uri('/s/').rstrip('/')
+        return Response({'short-link': f'{base_url}/{short_link.short_code}'})
 
     @action(
         detail=True,
@@ -375,9 +372,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
                                 status=status.HTTP_400_BAD_REQUEST)
 
 
-def redirect_short_link(request, short_code):
-    short_link = get_object_or_404(ShortLink, short_code=short_code)
-    return redirect(short_link.recipe.get_absolute_url())
+def redirect_to_recipe(request, code):
+    return redirect(get_object_or_404(ShortLink, short_code=code).original_url)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):

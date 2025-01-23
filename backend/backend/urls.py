@@ -1,5 +1,5 @@
 from api.views import (IngredientViewSet, RecipeViewSet, TagViewSet,
-                       UserViewSet, redirect_short_link)
+                       UserViewSet, redirect_to_recipe)
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -23,6 +23,5 @@ urlpatterns = [
     path('api/', include(router_v1.urls)),
     path('api/auth/', include('djoser.urls')),
     path('api/auth/', include('djoser.urls.authtoken')),
-    path('s/<str:short_code>/', redirect_short_link,
-         name='redirect_short_link'),
+    path('s/<str:code>/', redirect_to_recipe, name='redirect-to-recipe'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

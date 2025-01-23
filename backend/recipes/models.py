@@ -1,6 +1,5 @@
-import random
 import re
-import string
+import hashlib
 
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -137,20 +136,22 @@ class Subscription(models.Model):
 
 
 class ShortLink(models.Model):
-    recipe = models.OneToOneField(Recipe, on_delete=models.CASCADE)
-    short_code = models.CharField(max_length=10, unique=True)
+    original_url = models.URLField(max_length=300, unique=True, null=True,
+                                   verbose_name='Оригинальный URL')
+    short_code = models.CharField(max_length=20, unique=True,
+                                  verbose_name='Короткий код')
+
+    def generate_short_code(self):
+        return hashlib.md5(self.original_url.encode()).hexdigest()[:20]
 
     def save(self, *args, **kwargs):
         if not self.short_code:
             self.short_code = self.generate_short_code()
         super().save(*args, **kwargs)
-
-    def generate_short_code(self, length=10):
-        characters = string.ascii_letters + string.digits
-        while True:
-            short_code = ''.join(random.choices(characters, k=length))
-            if not ShortLink.objects.filter(short_code=short_code).exists():
-                return short_code
+    
+    class Meta:
+        verbose_name = 'Короткая ссылка'
+        verbose_name_plural = 'Короткие ссылки'
 
     def __str__(self):
-        return f"{self.recipe.name} -> {self.short_code}"
+        return f'{self.original_url} -> {self.short_code}'
