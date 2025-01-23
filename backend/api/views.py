@@ -9,6 +9,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 
 from .filters import IngredientFilter, RecipeFilter
+from .paginations import ApiPagination
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (AvatarSerializer, IngredientSerializer,
                           RecipeSerializer, SetPasswordSerializer,
@@ -217,7 +218,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     serializer_class = RecipeSerializer
     permission_classes = (IsAuthorOrReadOnly,
                           permissions.IsAuthenticatedOrReadOnly)
-    pagination_class = LimitOffsetPagination
+    pagination_class = ApiPagination
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
 
@@ -270,8 +271,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def create_short_link(self, request, pk=None):
         recipe = get_object_or_404(Recipe, pk=pk)
         short_link, created = ShortLink.objects.get_or_create(recipe=recipe)
-        short_url = request.build_absolute_uri(
-            f"/s/{short_link.short_code}/")
+        if created:
+            short_link.short_code = short_link.generate_short_code()
+            short_link.save()
+        short_url = request.build_absolute_uri(f"/s/{short_link.short_code}/")
         return Response({'short-link': short_url}, status=status.HTTP_200_OK)
 
     @action(
@@ -374,14 +377,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
 def redirect_short_link(request, short_code):
     short_link = get_object_or_404(ShortLink, short_code=short_code)
-    return redirect('recipe', pk=short_link.recipe.pk)
-
-
-class ShortLinkViewSet(viewsets.ViewSet):
-    @action(detail=False, methods=['get'], url_path='s/(?P<short_code>[^/.]+)')
-    def redirect(self, request, short_code=None):
-        short_link = get_object_or_404(ShortLink, short_code=short_code)
-        return redirect(short_link.recipe.get_absolute_url())
+    return redirect(short_link.recipe.get_absolute_url())
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):

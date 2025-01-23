@@ -1,5 +1,5 @@
-from api.views import (IngredientViewSet, RecipeViewSet, ShortLinkViewSet,
-                       TagViewSet, UserViewSet, redirect_short_link)
+from api.views import (IngredientViewSet, RecipeViewSet, TagViewSet,
+                       UserViewSet, redirect_short_link)
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -16,8 +16,6 @@ router_v1.register(r'tags', TagViewSet,
                    basename='tag')
 router_v1.register(r'ingredients', IngredientViewSet,
                    basename='ingredient')
-router_v1.register(r's', ShortLinkViewSet,
-                   basename='short-link')
 
 
 urlpatterns = [

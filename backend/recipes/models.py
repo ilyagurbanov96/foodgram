@@ -5,6 +5,7 @@ import string
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.forms import ValidationError
+from django.urls import reverse
 from users.models import User
 
 
@@ -53,6 +54,9 @@ class Recipe(models.Model):
                 1, 'Время приготовления не должно быть меньше 1 минуты'
             )
         ])
+
+    def get_absolute_url(self):
+        return reverse('recipe', kwargs={'pk': self.pk})
 
     class Meta:
         verbose_name = 'рецепт'
@@ -147,3 +151,6 @@ class ShortLink(models.Model):
             short_code = ''.join(random.choices(characters, k=length))
             if not ShortLink.objects.filter(short_code=short_code).exists():
                 return short_code
+
+    def __str__(self):
+        return f"{self.recipe.name} -> {self.short_code}"
