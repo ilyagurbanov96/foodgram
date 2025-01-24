@@ -136,7 +136,7 @@ class Subscription(models.Model):
 
 
 class ShortLink(models.Model):
-    original_url = models.URLField(max_length=300, unique=True, null=False,
+    original_url = models.URLField(max_length=300, unique=True, null=True,
                                    verbose_name='Оригинальный URL')
     short_code = models.CharField(max_length=20, unique=True,
                                   verbose_name='Короткий код')
@@ -150,7 +150,7 @@ class ShortLink(models.Model):
         super().save(*args, **kwargs)
 
     class Meta:
-        verbose_name = 'Короткая ссылка'
+        verbose_name = 'короткая ссылка'
         verbose_name_plural = 'Короткие ссылки'
 
     def __str__(self):
