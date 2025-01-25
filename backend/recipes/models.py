@@ -3,6 +3,7 @@ import hashlib
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.urls import reverse
+from django.utils.timezone import now
 
 from .abstract_models import AbstractRecipeRelation
 from users.models import User
@@ -57,7 +58,7 @@ class Recipe(models.Model):
                 MIN_VALUE_1, f'Время приготовления не должно быть меньше {MIN_VALUE_1} минуты'
             ),
         ))
-    pub_date = models.DateTimeField('Дата и время публикации')
+    pub_date = models.DateTimeField('Дата и время публикации', default=now,)
 
     def get_absolute_url(self):
         return reverse('recipe-detail', kwargs={'pk': self.pk})
