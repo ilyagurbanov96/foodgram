@@ -4,7 +4,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.urls import reverse
 
-from abstract_models import AbstractRecipeRelation
+from .abstract_models import AbstractRecipeRelation
 from users.models import User
 from recipes.constants import (MAX_LENGTH_256, MAX_LENGTH_128,
                                MAX_LENGTH_64, MAX_LENGTH_32,
@@ -57,6 +57,7 @@ class Recipe(models.Model):
                 MIN_VALUE_1, f'Время приготовления не должно быть меньше {MIN_VALUE_1} минуты'
             ),
         ))
+    pub_date = models.DateTimeField('Дата и время публикации')
 
     def get_absolute_url(self):
         return reverse('recipe-detail', kwargs={'pk': self.pk})
@@ -98,12 +99,24 @@ class RecipeIngredient(models.Model):
 
 class Favorite(AbstractRecipeRelation):
     class Meta(AbstractRecipeRelation.Meta):
+        constraints = (
+            models.UniqueConstraint(
+                fields=('user', 'recipe'),
+                name='unique_favorite_user_recipe'
+            ),
+        )
         verbose_name = 'избранное'
         verbose_name_plural = 'Избранное'
 
 
 class ShoppingCart(AbstractRecipeRelation):
     class Meta(AbstractRecipeRelation.Meta):
+        constraints = (
+            models.UniqueConstraint(
+                fields=('user', 'recipe'),
+                name='unique_shoppingcart_user_recipe'
+            ),
+        )
         verbose_name = 'список покупок'
         verbose_name_plural = 'Списки покупок'
 
