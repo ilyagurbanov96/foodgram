@@ -1,5 +1,6 @@
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
@@ -21,7 +22,7 @@ from .serializers import (AvatarSerializer, IngredientSerializer,
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserRegistrationSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = (permissions.AllowAny,)
     pagination_class = LimitOffsetPagination
 
     def list(self, request, *args, **kwargs):
@@ -215,7 +216,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    queryset = Recipe.objects.all()
+    queryset = Recipe.objects.select_related('author').prefetch_related('tags', 'ingredients')
     serializer_class = RecipeSerializer
     permission_classes = (IsAuthorOrReadOnly,
                           permissions.IsAuthenticatedOrReadOnly)
@@ -224,45 +225,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filterset_class = RecipeFilter
 
     def perform_create(self, serializer):
-        recipe = serializer.save(author=self.request.user)
-        tags_data = self.request.data.get('tags', [])
-        for tag_id in tags_data:
-            tag = get_object_or_404(Tag, id=tag_id)
-            recipe.tags.add(tag)
-        ingredients_data = self.request.data.get('ingredients', [])
-        for ingredient in ingredients_data:
-            ingredient_id = ingredient.get('id')
-            amount = ingredient.get('amount')
-            if ingredient_id is not None and amount is not None:
-                current_ingredient = get_object_or_404(Ingredient,
-                                                       id=ingredient_id)
-                RecipeIngredient.objects.create(
-                    ingredients=current_ingredient,
-                    recipe=recipe,
-                    amount=amount
-                )
-
-    def perform_update(self, serializer):
-        recipe = self.get_object()
-        tags_data = self.request.data.get('tags', [])
-        ingredients_data = self.request.data.get('ingredients', [])
-        recipe.tags.clear()
-        for tag_id in tags_data:
-            tag = get_object_or_404(Tag, id=tag_id)
-            recipe.tags.add(tag)
-        RecipeIngredient.objects.filter(recipe=recipe).delete()
-        for ingredient in ingredients_data:
-            ingredient_id = ingredient.get('id')
-            amount = ingredient.get('amount')
-            if ingredient_id is not None and amount is not None:
-                current_ingredient = get_object_or_404(
-                    Ingredient, id=ingredient_id)
-                RecipeIngredient.objects.create(
-                    ingredients=current_ingredient,
-                    recipe=recipe,
-                    amount=amount
-                )
-        serializer.save()
+        serializer.save(author=self.request.user)
 
     @action(
         detail=True,
@@ -270,9 +233,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         url_path='get-link'
     )
     def get_link(self, request, pk=None):
-        url = request.build_absolute_uri(f'/recipes/{pk}/')
+        url = request.build_absolute_uri(reverse('recipe-detail', args=[pk]))
         short_link, created = ShortLink.objects.get_or_create(original_url=url)
-        base_url = request.build_absolute_uri('/s/').rstrip('/')
+        base_url = request.build_absolute_uri(reverse('short-link-base')).rstrip('/')
         return Response({'short-link': f'{base_url}/{short_link.short_code}'})
 
     @action(
@@ -386,6 +349,6 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = (DjangoFilterBackend,)
     filterset_class = IngredientFilter
     pagination_class = None

@@ -1,6 +1,7 @@
 import base64
 
 from django.core.files.base import ContentFile
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
 from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
@@ -138,6 +139,35 @@ class RecipeSerializer(serializers.ModelSerializer):
                   'name', 'text',
                   'cooking_time', 'image',
                   'is_favorited', 'is_in_shopping_cart')
+    
+    def create(self, validated_data):
+        tags_data = validated_data.pop('tags', [])
+        ingredients_data = validated_data.pop('ingredients', [])
+        recipe = Recipe.objects.create(**validated_data)
+        recipe.tags.set(tags_data)
+        recipe_ingredients = [
+            RecipeIngredient(
+                ingredients=get_object_or_404(Ingredient, id=ingredient['id']),
+                recipe=recipe,
+                amount=ingredient['amount']
+            )
+            for ingredient in ingredients_data if ingredient.get('id') and ingredient.get('amount')
+        ]
+        RecipeIngredient.objects.bulk_create(recipe_ingredients)
+        return recipe
+    
+    def update(self, recipe, validated_data):
+        RecipeIngredient.objects.filter(recipe=recipe).delete()
+        recipe.tags.set(validated_data.pop('tags', []))
+        ingredients_data = validated_data.pop('ingredients', [])
+        RecipeIngredient.objects.bulk_create(
+            RecipeIngredient(
+                ingredients=get_object_or_404(Ingredient, id=ingredient['id']),
+                recipe=recipe,
+                amount=ingredient['amount']
+            ) for ingredient in ingredients_data if ingredient.get('id') and ingredient.get('amount')
+        )
+        return super().update(recipe, validated_data)
 
     def validate(self, data):
         self.validate_tags()
