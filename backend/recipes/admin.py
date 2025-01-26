@@ -64,6 +64,17 @@ class RecipeAdmin(admin.ModelAdmin):
     def favorite_count(self, obj):
         count = obj.favorites.count()
         return f'{count} {"раз" if count != 1 else "раза"}'
+    
+    @admin.display(description='Ингредиенты')
+    def get_ingredients(self, obj):
+        return ', '.join([ingredient.name for ingredient in obj.ingredients.all()])
+
+    @admin.display(description='Теги')
+    def get_tags(self, obj):
+        return ', '.join([tag.name for tag in obj.tags.all()])
+    @admin.display(description='Текст')
+    def text_preview(self, obj):
+        return obj.text[:50] + '...' if len(obj.text) > 50 else obj.text
 
 
 @admin.register(RecipeIngredient)
