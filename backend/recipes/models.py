@@ -26,7 +26,9 @@ class Tag(models.Model):
 
 class Ingredient(models.Model):
     name = models.CharField('Название', max_length=MAX_LENGTH_128, unique=True)
-    measurement_unit = models.CharField('Единица измерения', max_length=MAX_LENGTH_64)
+    measurement_unit = models.CharField(
+        'Единица измерения', max_length=MAX_LENGTH_64
+    )
 
     class Meta:
         constraints = (
@@ -55,7 +57,8 @@ class Recipe(models.Model):
     cooking_time = models.PositiveIntegerField(
         'Время приготовления', validators=(
             MinValueValidator(
-                MIN_VALUE_1, f'Время приготовления не должно быть меньше {MIN_VALUE_1} минуты'
+                MIN_VALUE_1, f'''Время приготовления не должно
+                быть меньше {MIN_VALUE_1} минуты'''
             ),
         ))
     pub_date = models.DateTimeField('Дата и время публикации', default=now,)
@@ -81,7 +84,8 @@ class RecipeIngredient(models.Model):
                                     verbose_name='Ингредиент')
     amount = models.PositiveIntegerField(
         'Количество', default=MIN_VALUE_1, validators=(MinValueValidator(
-            MIN_VALUE_1, f'Количество ингредиентов не может быть меньше {MIN_VALUE_1}'
+            MIN_VALUE_1, f'''Количество ингредиентов не может
+            быть меньше {MIN_VALUE_1}'''
         ),))
 
     class Meta:
@@ -123,13 +127,14 @@ class ShoppingCart(AbstractRecipeRelation):
 
 
 class ShortLink(models.Model):
-    original_url = models.URLField(max_length=MAX_LENGTH_256, unique=True, null=True,
-                                   verbose_name='Оригинальный URL')
+    original_url = models.URLField(max_length=MAX_LENGTH_256, unique=True,
+                                   null=True, verbose_name='Оригинальный URL')
     short_code = models.CharField(max_length=MAX_LENGTH_20, unique=True,
                                   verbose_name='Короткий код')
 
     def generate_short_code(self):
-        return hashlib.md5(self.original_url.encode()).hexdigest()[:MAX_LENGTH_20]
+        return hashlib.md5(self.original_url.encode()
+                           ).hexdigest()[:MAX_LENGTH_20]
 
     def save(self, *args, **kwargs):
         if not self.short_code:

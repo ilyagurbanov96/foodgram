@@ -24,21 +24,21 @@ from .serializers import (AvatarSerializer, FavoriteSerializer,
                           RecipeGetSerializer, ShoppingCartSerializer,
                           SubscriptionCreateSerializer,
                           SubscriptionGetSerializer, TagSerializer,
-                          UserProfileSerializer)
+                          UserRegistrationSerializer)
 
 
 class UserViewSet(DjoserUser):
     queryset = User.objects.all()
-    serializer_class = UserProfileSerializer
+    serializer_class = UserRegistrationSerializer
     permission_classes = (permissions.AllowAny,)
     pagination_class = LimitOffsetPagination
 
     def retrieve(self, request, pk=None):
         if pk == 'me':
-            serializer = UserProfileSerializer(request.user)
+            serializer = UserRegistrationSerializer(request.user)
             return Response(serializer.data)
         user = get_object_or_404(User, pk=pk)
-        serializer = UserProfileSerializer(user)
+        serializer = UserRegistrationSerializer(user)
         return Response(serializer.data)
 
     @action(
