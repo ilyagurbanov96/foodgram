@@ -1,12 +1,12 @@
 import os
 import tempfile
 
-from djoser.views import UserViewSet as DjoserUser
+from django.db.models import Count, Sum
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Sum, Count
+from djoser.views import UserViewSet as DjoserUser
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
@@ -15,14 +15,16 @@ from rest_framework.response import Response
 from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, ShortLink, Tag)
 from users.models import Subscription, User
+
 from .filters import IngredientFilter, RecipeFilter
 from .paginations import ApiPagination
 from .permissions import IsAuthorOrReadOnly
-from .serializers import (AvatarSerializer, IngredientSerializer,
-                          RecipeCreateSerializer, RecipeGetSerializer,
-                          ShoppingCartSerializer, FavoriteSerializer,
-                          TagSerializer, UserProfileSerializer,
-                          SubscriptionCreateSerializer, SubscriptionGetSerializer,)
+from .serializers import (AvatarSerializer, FavoriteSerializer,
+                          IngredientSerializer, RecipeCreateSerializer,
+                          RecipeGetSerializer, ShoppingCartSerializer,
+                          SubscriptionCreateSerializer,
+                          SubscriptionGetSerializer, TagSerializer,
+                          UserProfileSerializer)
 
 
 class UserViewSet(DjoserUser):
@@ -31,7 +33,6 @@ class UserViewSet(DjoserUser):
     permission_classes = (permissions.AllowAny,)
     pagination_class = LimitOffsetPagination
 
-
     def retrieve(self, request, pk=None):
         if pk == 'me':
             serializer = UserProfileSerializer(request.user)
@@ -39,7 +40,6 @@ class UserViewSet(DjoserUser):
         user = get_object_or_404(User, pk=pk)
         serializer = UserProfileSerializer(user)
         return Response(serializer.data)
-
 
     @action(
         detail=False,
@@ -59,15 +59,19 @@ class UserViewSet(DjoserUser):
                             status=status.HTTP_200_OK)
         return Response(serializer.errors,
                         status=status.HTTP_400_BAD_REQUEST)
-    
+
     def delete_avatar(self, request):
         user = request.user
         if user.avatar:
             user.avatar.delete(save=False)
             user.avatar = None
             user.save()
-            return Response({"detail": "Аватар успешно удален."}, status=status.HTTP_204_NO_CONTENT)
-        return Response({"detail": "Аватар не найден."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({
+                "detail": "Аватар успешно удален."
+            }, status=status.HTTP_204_NO_CONTENT)
+        return Response({
+            "detail": "Аватар не найден."
+        }, status=status.HTTP_404_NOT_FOUND)
 
     @action(
         detail=True,
@@ -78,21 +82,30 @@ class UserViewSet(DjoserUser):
     def subscribe(self, request, pk):
         author = self.get_object()
         user = request.user
-        serializer = SubscriptionCreateSerializer(data={'user': user.id, 'author': author.id})
+        serializer = SubscriptionCreateSerializer(
+            data={'user': user.id, 'author': author.id}
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response({'detail': 'Вы успешно подписались на автора.'}, status=status.HTTP_201_CREATED)
-    
+        return Response({
+            'detail': 'Вы успешно подписались на автора.'
+        }, status=status.HTTP_201_CREATED)
+
     @subscribe.mapping.delete
     def unsubscribe(self, request, pk):
         author = self.get_object()
         user = request.user
-        subscription = Subscription.objects.filter(user=user, author=author).first()
+        subscription = Subscription.objects.filter(
+            user=user, author=author
+        ).first()
         if subscription:
             subscription.delete()
-            return Response({'detail': 'Вы успешно отписались от автора.'}, status=status.HTTP_204_NO_CONTENT)
-        return Response({'detail': 'Вы не подписаны на этого автора.'}, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response({
+                'detail': 'Вы успешно отписались от автора.'
+            }, status=status.HTTP_204_NO_CONTENT)
+        return Response({
+            'detail': 'Вы не подписаны на этого автора.'
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     @action(
         detail=False,
@@ -109,7 +122,7 @@ class UserViewSet(DjoserUser):
             return self.get_paginated_response(serializer.data)
         serializer = SubscriptionGetSerializer(authors, many=True)
         return Response(serializer.data)
-    
+
 
 def create_entry(serializer_class, user, recipe_pk, context=None):
     recipe = get_object_or_404(Recipe, pk=recipe_pk)
@@ -124,7 +137,9 @@ def create_entry(serializer_class, user, recipe_pk, context=None):
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    queryset = Recipe.objects.select_related('author').prefetch_related('tags', 'ingredients')
+    queryset = Recipe.objects.select_related('author').prefetch_related(
+        'tags', 'ingredients'
+    )
     permission_classes = (IsAuthorOrReadOnly,
                           permissions.IsAuthenticatedOrReadOnly)
     pagination_class = ApiPagination
@@ -144,7 +159,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         methods=('post', 'get'),
         url_path='get-link'
     )
-    def get_link(self, request, pk=None): 
+    def get_link(self, request, pk=None):
         url = request.build_absolute_uri(reverse('recipe-detail', args=[pk]))
         short_link, created = ShortLink.objects.get_or_create(original_url=url)
         base_url = request.build_absolute_uri('/s/').rstrip('/')
@@ -157,15 +172,20 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[permissions.IsAuthenticated]
     )
     def shopping_cart(self, request, pk=None):
-        return create_entry(ShoppingCartSerializer, request.user, pk, context={'request': request})
-    
+        return create_entry(ShoppingCartSerializer, request.user, pk, context={
+            'request': request
+        })
+
     @shopping_cart.mapping.delete
     def delete_shopping_cart(self, request, pk=None):
-        shopping_cart = ShoppingCart.objects.filter(user=request.user, recipe_id=pk)
+        shopping_cart = ShoppingCart.objects.filter(
+            user=request.user, recipe_id=pk)
         if shopping_cart.exists():
             shopping_cart.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response({'detail': 'Рецепт не найден в корзине.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            'detail': 'Рецепт не найден в корзине.'
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     @action(
         detail=False,
@@ -175,20 +195,27 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def download_shopping_cart(self, request):
         ingredients = RecipeIngredient.objects.filter(
             recipe__shopping_carts__user=request.user
-        ).values('ingredients__name', 'ingredients__measurement_unit'
-        ).annotate(total_amount=Sum('amount')
+        ).values(
+            'ingredients__name', 'ingredients__measurement_unit').annotate(
+                total_amount=Sum('amount')
         ).order_by('ingredients__name')
         ingredients_text = self.format_ingredients_text(ingredients)
-        with tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8') as temp_file:
+        with tempfile.NamedTemporaryFile(
+            delete=False, mode='w', encoding='utf-8'
+        ) as temp_file:
             temp_file.write(ingredients_text)
             temp_file_path = temp_file.name
-        response = FileResponse(open(temp_file_path, 'rb'), content_type='text/plain')
-        response['Content-Disposition'] = 'attachment; filename="shopping_cart.txt"'
+        response = FileResponse(open(
+            temp_file_path, 'rb'
+        ), content_type='text/plain')
+        response[
+            'Content-Disposition'
+        ] = 'attachment; filename="shopping_cart.txt"'
         response['X-Accel-Buffering'] = 'no'
         response['Content-Length'] = os.path.getsize(temp_file_path)
         os.remove(temp_file_path)
         return response
-    
+
     @staticmethod
     def format_ingredients_text(ingredients):
         ingredients_text = "Список покупок:\n\n"
@@ -196,7 +223,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
             ingredient_name = ingredient['ingredients__name']
             measurement_unit = ingredient['ingredients__measurement_unit']
             total_amount = ingredient['total_amount']
-            ingredients_text += f"{ingredient_name} ({measurement_unit}) - {total_amount}\n"
+            ingredients_text += (
+                f"{ingredient_name} ({measurement_unit}) - {total_amount}\n"
+            )
         return ingredients_text
 
     @action(
@@ -206,15 +235,19 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(permissions.IsAuthenticated,)
     )
     def favorite(self, request, pk=None):
-        return create_entry(FavoriteSerializer, request.user, pk, context={'request': request})
-    
+        return create_entry(FavoriteSerializer, request.user, pk, context={
+            'request': request}
+        )
+
     @favorite.mapping.delete
     def delete_favorite(self, request, pk=None):
         favorite = Favorite.objects.filter(user=request.user, recipe_id=pk)
         if favorite.exists():
             favorite.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response({'detail': 'Рецепт не найден в избранном.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            'detail': 'Рецепт не найден в избранном.'
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):

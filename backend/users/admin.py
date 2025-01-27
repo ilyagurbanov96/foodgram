@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .models import (Subscription, User)
+from .models import Subscription, User
+
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
@@ -18,7 +19,7 @@ class UserAdmin(BaseUserAdmin):
     def recipe_count(self, obj):
         count = obj.recipes.count()
         return f'{count} {"рецепт" if count == 1 else "рецепта" if 2 <= count <= 4 else "рецептов"}'
-    
+
     @admin.display(description='Кол-во подписчиков')
     def subscription_count(self, obj):
         count = obj.subscribers.count()

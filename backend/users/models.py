@@ -3,7 +3,7 @@ from django.core.validators import EmailValidator, RegexValidator
 from django.db import models
 from django.forms import ValidationError
 
-from recipes.constants import (MAX_LENGTH_256, MAX_LENGTH_150, MAX_LENGTH_20)
+from recipes.constants import MAX_LENGTH_20, MAX_LENGTH_150, MAX_LENGTH_256
 
 
 class User(AbstractUser):
@@ -12,18 +12,19 @@ class User(AbstractUser):
     avatar = models.ImageField('Аватар', upload_to='avatars/',
                                blank=True, null=True, )
     email = models.EmailField('Электронная почта', unique=True,
-                              max_length=MAX_LENGTH_256, null=False, validators=[EmailValidator()],)
+                              max_length=MAX_LENGTH_256, null=False,
+                              validators=(EmailValidator(),),)
     username = models.CharField(
         'Имя пользователя',
         max_length=MAX_LENGTH_150,
         unique=True,
-        validators=[
+        validators=(
             RegexValidator(
                 regex=r'^[\w.@+-]+$',
                 message='''Введите корректный юзернейм.
                 Разрешены буквы, цифры и символы: @ . + - _''',
-            )
-        ],
+            ),
+        ),
         error_messages={
             'unique': "Пользователь с таким юзернеймом уже существует.",
             'blank': "Это поле обязательно для заполнения.",
@@ -72,7 +73,7 @@ class Subscription(models.Model):
         )
         verbose_name = 'подписка'
         verbose_name_plural = 'Подписки'
-    
+
     def clean(self):
         if self.user == self.author:
             raise ValidationError("Нельзя подписаться на самого себя.")

@@ -5,11 +5,11 @@ from django.db import models
 from django.urls import reverse
 from django.utils.timezone import now
 
-from .abstract_models import AbstractRecipeRelation
+from recipes.constants import (MAX_LENGTH_20, MAX_LENGTH_32, MAX_LENGTH_64,
+                               MAX_LENGTH_128, MAX_LENGTH_256, MIN_VALUE_1)
 from users.models import User
-from recipes.constants import (MAX_LENGTH_256, MAX_LENGTH_128,
-                               MAX_LENGTH_64, MAX_LENGTH_32,
-                               MAX_LENGTH_20, MIN_VALUE_1)
+
+from .abstract_models import AbstractRecipeRelation
 
 
 class Tag(models.Model):
