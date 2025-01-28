@@ -9,24 +9,21 @@ from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
 from users.models import Subscription, User
 
 
-class UserProfileSerializer(DjoserUserSerializer):
-    is_subscribed = serializers.SerializerMethodField(default=False)
-    avatar = Base64ImageField(required=False)
-
+class UserSerializer(DjoserUserSerializer):
     class Meta:
         model = User
         fields = ('id', 'email', 'username', 'first_name',
-                  'last_name', 'password', 'is_subscribed', 'avatar')
-        extra_kwargs = {
-            'password': {'write_only': True}
-        }
+                  'last_name')
+
+
+class UserProfileSerializer(UserSerializer):
+    is_subscribed = serializers.SerializerMethodField()
 
     def get_is_subscribed(self, obj):
         request = self.context['request']
-        user = request.user
-        if user.is_anonymous:
-            return False
-        return obj.authors.filter(user=user).exists()
+        if request.user.is_authenticated:
+            return obj.authors.filter(user=request.user).exists()
+        return False
 
 
 class AvatarSerializer(serializers.ModelSerializer):
