@@ -8,7 +8,7 @@ from recipes.constants import MAX_LENGTH_20, MAX_LENGTH_150, MAX_LENGTH_256
 
 class User(AbstractUser):
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ('username', 'first_name', 'last_name', 'password')
+    REQUIRED_FIELDS = ('username', 'first_name', 'last_name')
     avatar = models.ImageField('Аватар', upload_to='avatars/',
                                blank=True, null=True, )
     email = models.EmailField('Электронная почта', unique=True,
