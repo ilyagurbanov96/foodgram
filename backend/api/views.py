@@ -24,12 +24,12 @@ from .serializers import (AvatarSerializer, FavoriteSerializer,
                           RecipeGetSerializer, ShoppingCartSerializer,
                           SubscriptionCreateSerializer,
                           SubscriptionGetSerializer, TagSerializer,
-                          UserSerializer, UserProfileSerializer)
+                          UserProfileSerializer)
 
 
 class UserViewSet(DjoserUser):
     queryset = User.objects.all()
-    serializer_class = UserSerializer
+    serializer_class = UserProfileSerializer
     permission_classes = (permissions.AllowAny,)
     pagination_class = LimitOffsetPagination
 

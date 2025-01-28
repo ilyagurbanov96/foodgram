@@ -9,15 +9,13 @@ from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
 from users.models import Subscription, User
 
 
-class UserSerializer(DjoserUserSerializer):
+class UserProfileSerializer(DjoserUserSerializer):
+    is_subscribed = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = ('id', 'email', 'username', 'first_name',
-                  'last_name')
-
-
-class UserProfileSerializer(UserSerializer):
-    is_subscribed = serializers.SerializerMethodField()
+                  'last_name', 'is_subscribed')
 
     def get_is_subscribed(self, obj):
         request = self.context['request']
