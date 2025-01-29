@@ -33,12 +33,12 @@ class UserViewSet(DjoserUser):
     permission_classes = (permissions.AllowAny,)
     pagination_class = LimitOffsetPagination
 
-    def retrieve(self, request, pk=None):
-        if pk == 'me':
-            serializer = UserProfileSerializer(request.user)
-            return Response(serializer.data)
-        user = get_object_or_404(User, pk=pk)
-        serializer = UserProfileSerializer(user)
+    @action(detail=False,
+            methods=('get',),
+            permission_classes=[permissions.IsAuthenticated])
+    def me(self, request):
+        user = self.request.user
+        serializer = UserProfileSerializer(user, context={'request': request})
         return Response(serializer.data)
 
     @action(
@@ -60,6 +60,7 @@ class UserViewSet(DjoserUser):
         return Response(serializer.errors,
                         status=status.HTTP_400_BAD_REQUEST)
 
+    @avatar.mapping.delete
     def delete_avatar(self, request):
         user = request.user
         if user.avatar:
