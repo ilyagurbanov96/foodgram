@@ -155,13 +155,25 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
+#    @action(
+#        detail=True,
+#        methods=('post', 'get'),
+#        url_path='get-link'
+#    )
+#    def get_link(self, request, pk=None):
+#        url = request.build_absolute_uri(reverse('recipe-detail', args=[pk]))
+#        short_link, created = ShortLink.objects.get_or_create(
+# original_url=url)
+#        base_url = request.build_absolute_uri('/s/').rstrip('/')
+#        return Response({'short-link': f'{base_url}/{short_link.short_code}'})
+
     @action(
         detail=True,
-        methods=('post', 'get'),
+        methods=['post', 'get'],
         url_path='get-link'
     )
     def get_link(self, request, pk=None):
-        url = request.build_absolute_uri(reverse('recipe-detail', args=[pk]))
+        url = request.build_absolute_uri(f'/recipes/{pk}/')
         short_link, created = ShortLink.objects.get_or_create(original_url=url)
         base_url = request.build_absolute_uri('/s/').rstrip('/')
         return Response({'short-link': f'{base_url}/{short_link.short_code}'})

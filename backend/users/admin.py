@@ -18,12 +18,12 @@ class UserAdmin(BaseUserAdmin):
     @admin.display(description='Кол-во рецептов')
     def recipe_count(self, obj):
         count = obj.recipes.count()
-        return f'{count} {"рецепт" if count == 1 else "рецепта" if 2 <= count <= 4 else "рецептов"}'
+        return f'{count} {"рецепт" if count >= 1 else "рецепта"}'
 
     @admin.display(description='Кол-во подписчиков')
     def subscription_count(self, obj):
         count = obj.subscribers.count()
-        return f'{count} {"подписчик" if count == 1 else "подписчика" if 2 <= count <= 4 else "подписчиков"}'
+        return f'{count} {"подписчик" if count >= 1 else "подписчика"}'
 
 
 @admin.register(Subscription)

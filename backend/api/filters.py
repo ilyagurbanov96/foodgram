@@ -33,7 +33,8 @@ class RecipeFilter(django_filters.FilterSet):
 
     def filter_is_in_shopping_cart(self, queryset, name, value):
         user = self.request.user
-        shopping_cart_recipes = ShoppingCart.objects.filter(user=user).values_list('recipe', flat=True)
+        shopping_cart_recipes = ShoppingCart.objects.filter(
+            user=user).values_list('recipe', flat=True)
         if value:
             return queryset.filter(id__in=shopping_cart_recipes)
         return queryset
