@@ -4,7 +4,7 @@ import tempfile
 from django.db.models import Count, Sum
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
-from django.urls import reverse
+# from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet as DjoserUser
 from rest_framework import permissions, status, viewsets
@@ -162,8 +162,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
 #    )
 #    def get_link(self, request, pk=None):
 #        url = request.build_absolute_uri(reverse('recipe-detail', args=[pk]))
-#        short_link, created = ShortLink.objects.get_or_create(
-# original_url=url)
+#        short_link, created =
+# ShortLink.objects.get_or_create(original_url=url)
 #        base_url = request.build_absolute_uri('/s/').rstrip('/')
 #        return Response({'short-link': f'{base_url}/{short_link.short_code}'})
 

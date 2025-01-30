@@ -9,8 +9,6 @@ from recipes.constants import (MAX_LENGTH_20, MAX_LENGTH_32, MAX_LENGTH_64,
                                MAX_LENGTH_128, MAX_LENGTH_256, MIN_VALUE_1)
 from users.models import User
 
-from .abstract_models import AbstractRecipeRelation
-
 
 class Tag(models.Model):
     name = models.CharField('Название', max_length=MAX_LENGTH_32, unique=True)
@@ -102,6 +100,21 @@ class RecipeIngredient(models.Model):
         return f'{self.recipe} - {self.ingredients.name}'
 
 
+class AbstractRecipeRelation(models.Model):
+    user = models.ForeignKey(User,
+                             on_delete=models.CASCADE,
+                             verbose_name='Пользователь')
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE,
+                               verbose_name='Рецепт')
+
+    class Meta:
+        abstract = True
+
+    def __str__(self):
+        return f'''{self.user.username} - {self.recipe.name} (
+        {self._meta.verbose_name})'''
+
+
 class Favorite(AbstractRecipeRelation):
     class Meta(AbstractRecipeRelation.Meta):
         constraints = (
@@ -112,6 +125,7 @@ class Favorite(AbstractRecipeRelation):
         )
         verbose_name = 'избранное'
         verbose_name_plural = 'Избранное'
+        default_related_name = 'favorites'
 
 
 class ShoppingCart(AbstractRecipeRelation):
@@ -124,6 +138,7 @@ class ShoppingCart(AbstractRecipeRelation):
         )
         verbose_name = 'список покупок'
         verbose_name_plural = 'Списки покупок'
+        default_related_name = 'shoppingcarts'
 
 
 class ShortLink(models.Model):
