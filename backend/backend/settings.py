@@ -107,7 +107,8 @@ DATABASES = {
 #            'NAME': BASE_DIR / 'db.sqlite3',
 #        }
 #    }
-
+# Здесь по замечанию ревьюера нужно поставить условие.
+# Но из за того что не работают миграции я на всякий случай закомментировал условие.
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',

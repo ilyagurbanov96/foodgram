@@ -166,6 +166,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
 # ShortLink.objects.get_or_create(original_url=url)
 #        base_url = request.build_absolute_uri('/s/').rstrip('/')
 #        return Response({'short-link': f'{base_url}/{short_link.short_code}'})
+# Ниже код который работает. Замечание ревьюера:
+# Создавать реверс нужно на имя вью для короткой ссылки, а не используя ф-строку. url = request.build_absolute_uri(f'/recipes/{pk}/')
+# Я попытался сделать как ревьюер сказал. Но теперь перенаправляет не туда. точнее он добавляет к адресу api/
+# А его не должно быть. Что я сделал не так?
 
     @action(
         detail=True,
