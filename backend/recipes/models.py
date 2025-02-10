@@ -48,9 +48,9 @@ class Recipe(models.Model):
     name = models.CharField('Название', max_length=MAX_LENGTH_256)
     image = models.ImageField('Картинка', upload_to='recipes/images/')
     text = models.TextField('Текст')
-    ingredients = models.ManyToManyField(Ingredient,
-                                         through='RecipeIngredient',
-                                         verbose_name='Ингредиенты')
+    ingredient = models.ManyToManyField(Ingredient,
+                                        through='RecipeIngredient',
+                                        verbose_name='Ингредиенты')
     tags = models.ManyToManyField(Tag, verbose_name='Теги')
     cooking_time = models.PositiveIntegerField(
         'Время приготовления', validators=(
@@ -77,9 +77,9 @@ class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE,
                                related_name='recipe_ingredients',
                                verbose_name='Рецепт')
-    ingredients = models.ForeignKey(Ingredient, on_delete=models.CASCADE,
-                                    related_name='recipe_ingredients',
-                                    verbose_name='Ингредиент')
+    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE,
+                                   related_name='recipe_ingredients',
+                                   verbose_name='Ингредиент')
     amount = models.PositiveIntegerField(
         'Количество', default=MIN_VALUE_1, validators=(MinValueValidator(
             MIN_VALUE_1, f'''Количество ингредиентов не может
@@ -89,15 +89,15 @@ class RecipeIngredient(models.Model):
     class Meta:
         constraints = (
             models.UniqueConstraint(
-                fields=('recipe', 'ingredients'),
-                name='unique_recipe_ingredients'
+                fields=('recipe', 'ingredient'),
+                name='unique_recipe_ingredient'
             ),
         )
         verbose_name = 'ингредиент в рецепте'
         verbose_name_plural = 'Ингредиенты в рецепте'
 
     def __str__(self):
-        return f'{self.recipe} - {self.ingredients.name}'
+        return f'{self.recipe} - {self.ingredient.name}'
 
 
 class AbstractRecipeRelation(models.Model):

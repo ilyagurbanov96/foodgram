@@ -4,7 +4,7 @@ import tempfile
 from django.db.models import Count, Sum
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
-# from django.urls import reverse
+from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet as DjoserUser
 from rest_framework import permissions, status, viewsets
@@ -139,7 +139,7 @@ def create_entry(serializer_class, user, recipe_pk, context=None):
 
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.select_related('author').prefetch_related(
-        'tags', 'ingredients'
+        'tags', 'ingredient'
     )
     permission_classes = (IsAuthorOrReadOnly,
                           permissions.IsAuthenticatedOrReadOnly)
@@ -155,29 +155,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-#    @action(
-#        detail=True,
-#        methods=('post', 'get'),
-#        url_path='get-link'
-#    )
-#    def get_link(self, request, pk=None):
-#        url = request.build_absolute_uri(reverse('recipe-detail', args=[pk]))
-#        short_link, created =
-# ShortLink.objects.get_or_create(original_url=url)
-#        base_url = request.build_absolute_uri('/s/').rstrip('/')
-#        return Response({'short-link': f'{base_url}/{short_link.short_code}'})
-# Ниже код который работает. Замечание ревьюера:
-# Создавать реверс нужно на имя вью для короткой ссылки, а не используя ф-строку. url = request.build_absolute_uri(f'/recipes/{pk}/')
-# Я попытался сделать как ревьюер сказал. Но теперь перенаправляет не туда. точнее он добавляет к адресу api/
-# А его не должно быть. Что я сделал не так?
-
     @action(
         detail=True,
-        methods=['post', 'get'],
+        methods=('post', 'get'),
         url_path='get-link'
     )
     def get_link(self, request, pk=None):
-        url = request.build_absolute_uri(f'/recipes/{pk}/')
+        url = request.build_absolute_uri(
+            reverse('recipe-detail', args=[pk])
+        ).replace('/api', '')
         short_link, created = ShortLink.objects.get_or_create(original_url=url)
         base_url = request.build_absolute_uri('/s/').rstrip('/')
         return Response({'short-link': f'{base_url}/{short_link.short_code}'})
